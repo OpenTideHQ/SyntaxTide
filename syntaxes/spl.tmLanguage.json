@@ -7,39 +7,78 @@
       "include": "#comments"
     },
     {
-      "include": "#strings"
-    },
-    {
-      "include": "#numbers"
-    },
-    {
-      "include": "#booleans"
-    },
-    {
-      "include": "#commands"
-    },
-    {
-      "include": "#eval-functions"
-    },
-    {
-      "include": "#stats-functions"
-    },
-    {
-      "include": "#operators"
-    },
-    {
-      "include": "#fields"
+      "include": "#subsearches"
     },
     {
       "include": "#macros"
     },
     {
-      "include": "#subsearches"
+      "include": "#strings"
+    },
+    {
+      "include": "#regex-patterns"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#special-values"
+    },
+    {
+      "include": "#ip-addresses"
+    },
+    {
+      "include": "#time-modifiers"
+    },
+    {
+      "include": "#logical-operators"
+    },
+    {
+      "include": "#clause-keywords"
+    },
+    {
+      "include": "#commands"
+    },
+    {
+      "include": "#aggregate-functions"
+    },
+    {
+      "include": "#eval-functions"
+    },
+    {
+      "include": "#comparison-operators"
+    },
+    {
+      "include": "#arithmetic-operators"
+    },
+    {
+      "include": "#special-fields"
+    },
+    {
+      "include": "#field-value-pairs"
+    },
+    {
+      "include": "#wildcards"
+    },
+    {
+      "include": "#punctuation"
+    },
+    {
+      "include": "#field-references"
+    },
+    {
+      "include": "#pipe-separator"
     }
   ],
   "repository": {
     "comments": {
       "patterns": [
+        {
+          "name": "comment.block.spl",
+          "begin": "```comment",
+          "end": "```",
+          "patterns": []
+        },
         {
           "name": "comment.line.backtick.spl",
           "match": "```[^`]*```"
@@ -54,8 +93,16 @@
           "end": "\"",
           "patterns": [
             {
+              "name": "variable.parameter.field.interpolated.spl",
+              "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*\\$"
+            },
+            {
               "name": "constant.character.escape.spl",
-              "match": "\\\\."
+              "match": "\\\\[\"\\\\|nrt]"
+            },
+            {
+              "name": "constant.other.placeholder.spl",
+              "match": "%[a-zA-Z]"
             }
           ]
         },
@@ -66,7 +113,7 @@
           "patterns": [
             {
               "name": "constant.character.escape.spl",
-              "match": "\\\\."
+              "match": "\\\\['\\\\]"
             }
           ]
         }
@@ -79,8 +126,12 @@
           "match": "\\b0[xX][0-9a-fA-F]+\\b"
         },
         {
+          "name": "constant.numeric.scientific.spl",
+          "match": "\\b[0-9]+\\.?[0-9]*[eE][+-]?[0-9]+\\b"
+        },
+        {
           "name": "constant.numeric.float.spl",
-          "match": "\\b[0-9]+\\.[0-9]+([eE][+-]?[0-9]+)?\\b"
+          "match": "\\b[0-9]+\\.[0-9]+\\b"
         },
         {
           "name": "constant.numeric.integer.spl",
@@ -88,115 +139,308 @@
         }
       ]
     },
-    "booleans": {
+    "special-values": {
       "patterns": [
         {
           "name": "constant.language.boolean.spl",
-          "match": "\\b(true|false|t|f|TRUE|FALSE|T|F)\\b"
+          "match": "\\b(?i:true|false|t|f|yes|no)\\b"
         },
         {
           "name": "constant.language.null.spl",
-          "match": "\\b(null|NULL)\\b"
+          "match": "\\b(?i:null)\\b"
+        },
+        {
+          "name": "constant.numeric.special.spl",
+          "match": "\\b(?:nan|inf|-inf)\\b"
+        }
+      ]
+    },
+    "time-modifiers": {
+      "patterns": [
+        {
+          "name": "keyword.other.time.spl",
+          "match": "\\b(?:earliest|latest|starttime|endtime|timeformat|span|now)="
+        },
+        {
+          "name": "keyword.other.snap.spl",
+          "match": "@(?:s|m|h|d|w[01]?|mon|q|y)\\b"
+        },
+        {
+          "name": "constant.other.time-unit.spl",
+          "match": "(?<=[0-9])(?:s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|week|weeks|mon|month|months|q|quarter|quarters|y|yr|yrs|year|years)\\b"
+        }
+      ]
+    },
+    "logical-operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.logical.spl",
+          "match": "\\b(?:AND|OR|NOT|XOR)\\b"
+        }
+      ]
+    },
+    "clause-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.clause.spl",
+          "match": "\\b(?i:AS|BY|OVER|WHERE|IN|LIKE)\\b"
+        }
+      ]
+    },
+    "pipe-separator": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.pipe.spl",
+          "match": "\\|"
         }
       ]
     },
     "commands": {
       "patterns": [
         {
-          "name": "keyword.control.pipe.spl",
-          "match": "\\|"
+          "name": "entity.name.function.command.generating.spl",
+          "match": "(?:^|(?<=\\|))\\s*\\b(?:datamodel|dbinspect|eventcount|from|inputcsv|inputlookup|iplocation|loadjob|makeresults|metadata|mstats|rest|savedsearch|search|tstats)\\b"
         },
         {
-          "name": "keyword.control.search.spl",
-          "match": "\\b(search|where|eval|stats|chart|timechart|table|fields|rename|rex|replace|regex|erex|transaction|multisearch|append|appendcols|join|lookup|inputlookup|outputlookup|return|map|spath|xpath|xmlkv|kvform|extract|multikv|typer|eventstats|streamstats|bin|bucket|dedup|head|tail|sort|reverse|uniq|rare|top|untable|xyseries|transpose|makemv|mvexpand|nomv|fillnull|filldown|autoregress|delta|accum|autoregress|trendline|cluster|kmeans|outlier|anomalies|predict|x11|correlate)\\b"
+          "name": "entity.name.function.command.transforming.spl",
+          "match": "(?:^|(?<=\\|))\\s*\\b(?:addcoltotals|addtotals|anomalydetection|append|chart|timechart|bin|bucket|contingency|correlate|eventcount|eventstats|gauge|chart|pivot|rare|rex|sichart|sirare|sistats|sitimechart|sitop|stats|streamstats|table|timechart|top|transaction|trendline|tstats|untable|xyseries)\\b"
         },
         {
-          "name": "keyword.control.transforming.spl",
-          "match": "\\b(addcoltotals|addtotals|addinfo|abstract|analyzefields|anomalousvalue|associate|audit|collect|contingency|convert|crawl|datamodel|dbinspect|delete|diff|erex|eventcount|fieldsummary|findtypes|folderize|format|from|gauge|gentimes|geom|geomfilter|geostats|highlight|history|iconify|input|inputcsv|iplocation|loadjob|localize|localop|makeresults|mcollect|metadata|metasearch|mstats|multisearch|mvcombine|pivot|pivot|rangemap|redistribute|reltime|rest|savedsearch|script|scrub|searchtxn|sendemail|set|setfields|sichart|sirare|sistats|sitimechart|sitop|stats|strcat|streamstats|table|tags|timechart|transaction|transpose|tscollect|tstats|typeahead|typelearner|typer|union|uniq|untable|where|x11|xmlkv|xmlunescape|xpath|xyseries)\\b"
+          "name": "entity.name.function.command.streaming.spl",
+          "match": "(?:^|(?<=\\|))\\s*\\b(?:abstract|accum|addinfo|addtotals|autoregress|convert|dedup|eval|extract|fields|fieldformat|fillnull|filldown|makemv|mvexpand|nomv|rangemap|regex|rename|replace|rex|rtorder|sendemail|streamstats|strcat|tags|typer|where)\\b"
         },
         {
-          "name": "keyword.control.generating.spl",
-          "match": "\\b(datamodel|dbinspect|eventcount|from|inputcsv|inputlookup|iplocation|loadjob|makeresults|metadata|mstats|rest|savedsearch|search|tstats)\\b"
+          "name": "entity.name.function.command.dataset.spl",
+          "match": "(?:^|(?<=\\|))\\s*\\b(?:analyzefields|anomalies|anomalousvalue|associate|cluster|contingency|correlate|diff|head|tail|join|lookup|multisearch|mvcombine|reverse|selfjoin|set|sort|transaction|uniq|untable)\\b"
         },
         {
-          "name": "keyword.other.as.spl",
-          "match": "\\b(as|AS|by|BY|over|OVER)\\b"
+          "name": "entity.name.function.command.orchestrating.spl",
+          "match": "(?:^|(?<=\\|))\\s*\\b(?:localop|redistribute|noop)\\b"
         },
         {
-          "name": "keyword.other.span.spl",
-          "match": "\\b(span|SPAN)\\b"
+          "name": "entity.name.function.command.other.spl",
+          "match": "(?:^|(?<=\\|))\\s*\\b(?:appendcols|appendpipe|arules|awssnsalert|bucketdir|cofilter|collect|concurrency|crawl|delete|erex|findtypes|folderize|format|gentimes|geom|geomfilter|geostats|highlight|history|iconify|input|kmeans|kvform|localize|map|mcatalog|mcollect|multikv|outputcsv|outputlookup|outlier|overlap|predict|prjob|reltime|return|run|runshellscript|scrub|searchtxn|sendalert|set|setfields|sistats|spath|transpose|tscollect|typeahead|typelearner|union|uniq|x11|xmlkv|xmlunescape|xpath)\\b"
+        }
+      ]
+    },
+    "aggregate-functions": {
+      "patterns": [
+        {
+          "name": "support.function.aggregate.spl",
+          "match": "\\b(?:avg|count|c|dc|distinct_count|earliest|earliest_time|estdc|estdc_error|exactperc[0-9]*|first|last|latest|latest_time|list|max|mean|median|min|mode|per_day|per_hour|per_minute|per_second|perc[0-9]*|range|rate|rate_avg|rate_sum|stdev|stdevp|stdevs|stdevps|sum|sumsq|upperperc[0-9]*|values|var|varp|vars|varps)(?=\\s*\\()"
         }
       ]
     },
     "eval-functions": {
       "patterns": [
         {
+          "name": "support.function.comparison.spl",
+          "match": "\\b(?:case|cidrmatch|coalesce|false|if|in|like|lookup|match|null|nullif|searchmatch|true|validate)(?=\\s*\\()"
+        },
+        {
           "name": "support.function.string.spl",
-          "match": "\\b(substr|upper|lower|trim|ltrim|rtrim|replace|split|len|urldecode|printf|tostring|tonumber|mvindex|mvcount|mvfilter|mvfind|mvjoin|mvrange|mvsort|mvdedup|mvappend|mvzip|commands|like|searchmatch|cidrmatch|match|case|if|validate|coalesce|null|nullif|isnull|isnotnull|isnum|isstr|typeof)\\b"
+          "match": "\\b(?:len|lower|ltrim|replace|rtrim|spath|substr|trim|upper|urldecode|printf|split)(?=\\s*\\()"
         },
         {
           "name": "support.function.math.spl",
-          "match": "\\b(abs|ceil|floor|round|sqrt|pow|exp|ln|log|exp2|log2|exp10|log10|pi|random|sigfig|exact|ceiling)\\b"
+          "match": "\\b(?:abs|ceiling|ceil|exact|exp|floor|ln|log|pi|pow|round|sigfig|sqrt|sum)(?=\\s*\\()"
+        },
+        {
+          "name": "support.function.trig.spl",
+          "match": "\\b(?:acos|acosh|asin|asinh|atan|atan2|atanh|cos|cosh|hypot|sin|sinh|tan|tanh)(?=\\s*\\()"
         },
         {
           "name": "support.function.date.spl",
-          "match": "\\b(now|time|relative_time|strftime|strptime|date_hour|date_mday|date_minute|date_month|date_second|date_wday|date_year|date_zone)\\b"
+          "match": "\\b(?:now|time|relative_time|strftime|strptime|date_hour|date_mday|date_minute|date_month|date_second|date_wday|date_year|date_zone)(?=\\s*\\()"
         },
         {
           "name": "support.function.conversion.spl",
-          "match": "\\b(tostring|tonumber|tohex|tobase64|toobject|json_object|json_array|json_extract|json_extract_exact|json_set|spath|tojson)\\b"
+          "match": "\\b(?:tostring|tonumber|tobool|toint|todouble|tomv|toarray|toobject|ipmask)(?=\\s*\\()"
         },
         {
           "name": "support.function.crypto.spl",
-          "match": "\\b(md5|sha1|sha256|sha512)\\b"
+          "match": "\\b(?:md5|sha1|sha256|sha512)(?=\\s*\\()"
+        },
+        {
+          "name": "support.function.json.spl",
+          "match": "\\b(?:json|json_valid|json_object|json_array|json_keys|json_entries|json_extract|json_extract_exact|json_set|json_set_exact|json_append|json_extend|json_delete|json_has_key_exact|json_array_to_mv|mv_to_json_array)(?=\\s*\\()"
+        },
+        {
+          "name": "support.function.multivalue.spl",
+          "match": "\\b(?:mvappend|mvcount|mvdedup|mvfilter|mvfind|mvindex|mvjoin|mvmap|mvrange|mvsort|mvzip|commands)(?=\\s*\\()"
+        },
+        {
+          "name": "support.function.bitwise.spl",
+          "match": "\\b(?:bit_and|bit_or|bit_not|bit_xor|bit_shift_left|bit_shift_right)(?=\\s*\\()"
         },
         {
           "name": "support.function.informational.spl",
-          "match": "\\b(isint|isnum|isstr|isbool|isnull|isnotnull|typeof|spath|searchmatch|commands)\\b"
-        }
-      ]
-    },
-    "stats-functions": {
-      "patterns": [
+          "match": "\\b(?:isstr|isnum|isbool|isint|isdouble|ismv|isarray|isobject|isnull|isnotnull|typeof)(?=\\s*\\()"
+        },
         {
-          "name": "support.function.aggregate.spl",
-          "match": "\\b(avg|c|count|dc|distinct_count|earliest|earliest_time|estdc|estdc_error|exactperc|first|last|latest|latest_time|list|max|mean|median|min|mode|per_day|per_hour|per_minute|per_second|perc|perc[0-9]+|range|rate|rate_avg|rate_sum|stdev|stdevp|sum|sumsq|upper|values|var|varp)\\b"
+          "name": "support.function.statistical.spl",
+          "match": "\\b(?:avg|max|min|random)(?=\\s*\\()"
         }
       ]
     },
-    "operators": {
+    "comparison-operators": {
       "patterns": [
         {
           "name": "keyword.operator.comparison.spl",
-          "match": "(==|!=|<|>|<=|>=)"
-        },
-        {
-          "name": "keyword.control.spl",
-          "match": "\\b(AND|OR|NOT|XOR|and|or|not|xor)\\b"
-        },
-        {
-          "name": "keyword.operator.arithmetic.spl",
-          "match": "(\\+|-|\\*|/|%)"
-        },
-        {
-          "name": "keyword.operator.assignment.spl",
-          "match": "="
+          "match": "(?:==|!=|<=|>=|<|>)(?!=)"
         }
       ]
     },
-    "fields": {
+    "arithmetic-operators": {
       "patterns": [
         {
-          "name": "variable.other.field.spl",
-          "match": "\\b[a-zA-Z_][a-zA-Z0-9_\\.]*\\b(?=\\s*=)"
+          "name": "keyword.operator.arithmetic.spl",
+          "match": "(?:\\+|-(?!\\d)|\\*|/|%)(?!=)"
         },
+        {
+          "name": "keyword.operator.string.concatenation.spl",
+          "match": "(?<=\\s)\\.(?=\\s)"
+        }
+      ]
+    },
+    "special-fields": {
+      "patterns": [
+        {
+          "name": "variable.language.special.spl",
+          "match": "\\b(?:_time|_raw|_indextime|_sourcetype|_source|_host|_kv|_cd|_bkt|_si|_serial)\\b"
+        },
+        {
+          "name": "variable.other.index.spl",
+          "match": "\\b(?:index|sourcetype|source|host|splunk_server)(?=\\s*=)"
+        }
+      ]
+    },
+    "field-references": {
+      "patterns": [
         {
           "name": "variable.parameter.field.spl",
           "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*\\$"
         },
         {
-          "name": "entity.name.tag.index.spl",
-          "match": "\\b(index|sourcetype|source|host|_time|_raw|_indextime|splunk_server)\\s*="
+          "name": "punctuation.definition.field.dynamic.spl",
+          "match": "\\{[a-zA-Z_][a-zA-Z0-9_]*\\}"
+        },
+        {
+          "name": "variable.other.field.spl",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "regex-patterns": {
+      "patterns": [
+        {
+          "name": "meta.rex-command.spl",
+          "begin": "(?<=\\|)\\s*(rex)\\b",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.function.command.streaming.spl"
+            }
+          },
+          "end": "(?=\\||$)",
+          "patterns": [
+            {
+              "include": "#rex-string-pattern"
+            },
+            {
+              "include": "#field-value-pairs"
+            },
+            {
+              "include": "#strings"
+            }
+          ]
+        }
+      ]
+    },
+    "rex-string-pattern": {
+      "patterns": [
+        {
+          "name": "string.regexp.spl",
+          "begin": "(?<!field=)\"(?=[^\"]*\\(\\?<)",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "entity.name.tag.named-group.spl",
+              "match": "\\(\\?<([a-zA-Z_][a-zA-Z0-9_]*)>",
+              "captures": {
+                "1": {
+                  "name": "variable.other.field.captured.spl"
+                }
+              }
+            },
+            {
+              "name": "constant.character.escape.regex.spl",
+              "match": "\\\\[\\\\dwsSDWnrt\\[\\](){}.*+?^$|]"
+            },
+            {
+              "name": "keyword.control.regex-group.spl",
+              "match": "\\(|\\)"
+            },
+            {
+              "name": "keyword.control.regex-class.spl",
+              "match": "\\[|\\]"
+            },
+            {
+              "name": "keyword.operator.regex-quantifier.spl",
+              "match": "[*+?]|\\{[0-9,]+\\}"
+            },
+            {
+              "name": "keyword.operator.regex-anchor.spl",
+              "match": "\\^|\\$"
+            }
+          ]
+        }
+      ]
+    },
+    "ip-addresses": {
+      "patterns": [
+        {
+          "name": "constant.numeric.ip-address.spl",
+          "match": "\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\\b"
+        }
+      ]
+    },
+    "field-value-pairs": {
+      "patterns": [
+        {
+          "name": "meta.field-value-pair.spl",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_\\.]*)(=)",
+          "captures": {
+            "1": {
+              "name": "variable.other.property.spl"
+            },
+            "2": {
+              "name": "keyword.operator.assignment.spl"
+            }
+          }
+        }
+      ]
+    },
+    "wildcards": {
+      "patterns": [
+        {
+          "name": "constant.character.wildcard.spl",
+          "match": "(?<![a-zA-Z0-9_])\\*(?![a-zA-Z0-9_])|(?<=[a-zA-Z0-9_])\\*(?![a-zA-Z0-9_])|(?<![a-zA-Z0-9_])\\*(?=[a-zA-Z0-9_])"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.definition.parameters.begin.spl",
+          "match": "\\("
+        },
+        {
+          "name": "punctuation.definition.parameters.end.spl",
+          "match": "\\)"
+        },
+        {
+          "name": "punctuation.separator.comma.spl",
+          "match": ","
         }
       ]
     },
@@ -204,7 +448,22 @@
       "patterns": [
         {
           "name": "entity.name.function.macro.spl",
-          "match": "`[a-zA-Z_][a-zA-Z0-9_]*(?:\\([^)]*\\))?`"
+          "begin": "`",
+          "end": "`",
+          "patterns": [
+            {
+              "name": "variable.parameter.macro.spl",
+              "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+            },
+            {
+              "name": "punctuation.definition.arguments.begin.spl",
+              "match": "\\("
+            },
+            {
+              "name": "punctuation.definition.arguments.end.spl",
+              "match": "\\)"
+            }
+          ]
         }
       ]
     },
@@ -214,6 +473,16 @@
           "name": "meta.embedded.subsearch.spl",
           "begin": "\\[",
           "end": "\\]",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.subsearch.begin.spl"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.subsearch.end.spl"
+            }
+          },
           "patterns": [
             {
               "include": "$self"

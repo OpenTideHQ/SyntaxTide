@@ -1,12 +1,12 @@
 {
-  "name": "opentide-query-syntax",
+  "name": "syntaxtide",
   "displayName": "OpenTide Query Syntax Highlighting",
-  "description": "Adds query language syntax highlighting (KQL, SPL, and more) to OpenTide YAML files",
+  "description": "Adds query language syntax highlighting to OpenTide YAML rule files",
   "version": "0.1.0",
   "publisher": "opentide",
   "icon": "syntaxtide-icon.png",
   "galleryBanner": {
-    "color": "#1e1e1e",
+    "color": "#003399",
     "theme": "dark"
   },
   "repository": {
@@ -41,21 +41,24 @@
     "languages": [
       {
         "id": "kql",
-        "aliases": ["Kusto Query Language", "KQL", "kql"],
-        "extensions": [".kql", ".kusto"],
-        "configuration": "./language-configuration.json"
+        "aliases": [
+          "Kusto Query Language",
+          "KQL"
+        ]
       },
       {
         "id": "spl",
-        "aliases": ["Splunk SPL", "SPL", "spl"],
-        "extensions": [".spl"],
-        "configuration": "./language-configuration.json"
+        "aliases": [
+          "Splunk Processing Language",
+          "SPL"
+        ]
       },
       {
         "id": "cbc",
-        "aliases": ["Carbon Black Cloud", "CBC", "cbc"],
-        "extensions": [".cbc"],
-        "configuration": "./language-configuration.json"
+        "aliases": [
+          "Carbon Black Cloud Query",
+          "CBC"
+        ]
       }
     ],
     "grammars": [

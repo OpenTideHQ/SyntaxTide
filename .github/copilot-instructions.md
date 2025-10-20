@@ -4,6 +4,11 @@
 
 SyntaxTide is a **pure TextMate grammar-based VS Code extension** that provides syntax highlighting for multiple query languages (KQL, SPL, CBC) embedded in OpenTide YAML detection rule files. No TypeScript code, no LSP - just grammar injection for context-aware highlighting.
 
+## Procedures
+
+- When adding a significant new feature or query language, update this document with relevant instructions and architecture details.
+- Also document in CHANGELOG.md and syntaxes/README.md as appropriate.
+
 ## Architecture: Grammar Injection Pattern
 
 **Core Concept**: Inject query language grammars into YAML files based on configuration paths.
@@ -61,18 +66,27 @@ All injection grammars follow this pattern:
 
 ### Workspace Extension Setup
 
-**Critical**: Extension lives at root but loads via junction symlink:
+**Critical**: Extension lives at root but loads via junction/symlink:
 ```
 SyntaxTide/                         # ← All files here (package.json, syntaxes/, etc.)
 ├── .vscode/extensions/
-│   └── syntaxtide/                 # ← Junction pointing to ../../../
+│   └── syntaxtide/                 # ← Junction (Windows) or Symlink (Unix) pointing to root
 ```
 
 **First time setup**:
 ```bash
-./setup-dev.bat        # Windows: creates junction
-bash setup-dev.sh      # Unix: creates symlink
+# Windows (RECOMMENDED - uses junction which works better)
+./setup-dev.bat
+
+# Linux/Mac (uses symlink)
+bash setup-dev.sh
 ```
+
+**Important Notes:**
+- **Windows users**: Use `setup-dev.bat` (creates junction with `mklink /J`)
+- **Linux/Mac users**: Use `setup-dev.sh` (creates symlink)
+- Git Bash on Windows has symlink issues - always use the .bat file on Windows
+- You may need to run `setup-dev.bat` as Administrator on Windows
 
 **After any change**: `Ctrl+Shift+P` → "Developer: Reload Window"
 

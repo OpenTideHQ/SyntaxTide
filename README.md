@@ -1,5 +1,5 @@
 <table align="center"><tr><td align="center" width="9999">
-<img src="syntaxtide-icon.png" align="center" width="150" alt="Project icon">
+<img src="https://raw.githubusercontent.com/OpenTideHQ/SyntaxTide/refs/heads/main/syntaxtide-icon.png" align="center" width="150" alt="Project icon">
 
 # SyntaxTide
 

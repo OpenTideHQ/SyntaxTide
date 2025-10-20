@@ -138,6 +138,34 @@ configurations:
       | table _time, user, domain, username, src_ip, failed_attempts, unique_hosts, duration, asset_category, risk_score
       | sort - failed_attempts
       | head 100
+      | 
+      | eval json_data=json_object("user", user, "score", risk_score)
+      | eval is_valid=if(isnotnull(user) AND isstr(user), true, false)
+      | eval hash=md5(user . src_ip)
+      | eval timestamp=strftime(now(), "%Y-%m-%d %H:%M:%S")
+      | where cidrmatch("10.0.0.0/8", src_ip) OR cidrmatch("192.168.0.0/16", src_ip)
+      | eval categories=mvappend("security", "authentication", "failed_login")
+      | eval first_cat=mvindex(categories, 0)
+      | eval bits=bit_and(failed_attempts, 0xFF)
+      | eval rounded=round(failed_attempts / 10) * 10
+      | eval math_result=sqrt(pow(failed_attempts, 2) + pow(unique_hosts, 2))
+      | eval trig_result=sin(pi() / 4)
+      | bin _time span=1h
+      | eventstats avg(failed_attempts) as avg_failures by hour
+      | where failed_attempts > avg_failures
+      | streamstats count as running_count
+      | transaction user maxspan=30m maxpause=5m
+      | dedup user sortby -_time
+      | append [search index=audit action=account_locked | fields user]
+      | appendcols [search index=risk user=* | stats max(risk_score) as max_risk by user]
+      | join type=left user [search index=identity | fields user, department]
+      | chart count by user, hour
+      | timechart span=5m count by action
+      | top 10 user
+      | rare 5 src_ip
+      | anomalies threshold=0.01
+      | cluster t=0.8 showcount=true
+      | `custom_macro(param1, param2)`
 
   # ===================================================================
   # CARBON BLACK CLOUD - Should NOW have CBC syntax highlighting
