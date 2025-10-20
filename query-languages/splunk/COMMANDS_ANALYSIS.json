@@ -1,0 +1,791 @@
+{
+  "abstract": {
+    "description": "Produces an abstract, a summary or brief representation, of the text of the search results. The original text is replaced by the summary.",
+    "type": "Unknown",
+    "category": "Data Manipulation",
+    "syntax": "abstract [maxterms=<int>] [maxlines=<int>]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "maxterms",
+        "syntax": "maxterms=<int>",
+        "description": "The maximum number of terms to match. Accepted values are 1 to 1000.",
+        "default": "1000"
+      },
+      {
+        "name": "maxlines",
+        "syntax": "maxlines=<int>",
+        "description": "The maximum number of lines to match. Accepted values are 1 to 500.",
+        "default": "10"
+      }
+    ]
+  },
+  "accum": {
+    "description": "For each event where field is a number, the accum command calculates a running total or sum of the numbers. The accumulated sum can be returned to either the same field, or a newfield that you specify.",
+    "type": "Unknown",
+    "category": "Stats & Aggregation",
+    "syntax": "accum <field> [AS <newfield>]",
+    "required_args": [
+      {
+        "name": "field",
+        "syntax": "<string>",
+        "description": "The name of the field that you want to calculate the accumulated sum for. The field must contain numeric values."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "newfield",
+        "syntax": "<string>",
+        "description": "The name of a new field where you want the results placed."
+      }
+    ]
+  },
+  "addcoltotals": {
+    "description": "The addcoltotals command appends a new result to the end of the search result set. The result contains the sum of each numeric field or you can specify which fields to summarize.",
+    "type": "Unknown",
+    "category": "Stats & Aggregation",
+    "syntax": "addcoltotals [labelfield=<field>] [label=<string>] [<wc-field-list>]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "wc-field-list",
+        "syntax": "<field> ...",
+        "description": "A space delimited list of valid field names. The addcoltotals command calculates the sum only for the fields in the list you specify."
+      },
+      {
+        "name": "labelfield",
+        "syntax": "labelfield=<fieldname>",
+        "description": "Specify a field name to add to the result set.",
+        "default": "none"
+      },
+      {
+        "name": "label",
+        "syntax": "label=<string>",
+        "description": "Used with the labelfield argument to add a label in the summary event.",
+        "default": "Total"
+      }
+    ]
+  },
+  "addinfo": {
+    "description": "Adds fields to each event that contain global, common information about the search. This command is primarily an internally-used component of Summary Indexing.",
+    "type": "Distributable Streaming",
+    "category": "Data Manipulation",
+    "syntax": "addinfo",
+    "required_args": [],
+    "optional_args": []
+  },
+  "addtotals": {
+    "description": "The addtotals command computes the arithmetic sum of all numeric fields for each search result. The results appear in the Statistics tab.",
+    "type": "Distributable Streaming / Transforming",
+    "category": "Stats & Aggregation",
+    "syntax": "addtotals [row=<bool>] [col=<bool>] [labelfield=<field>] [label=<string>] [fieldname=<field>] [<field-list>]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "field-list",
+        "syntax": "<field> ...",
+        "description": "One or more numeric fields, delimited with a space. Only the fields specified in the <field-list> are summed."
+      },
+      {
+        "name": "row",
+        "syntax": "row=<bool>",
+        "description": "Specifies whether to calculate the sum of the <field-list> for each event.",
+        "default": "true"
+      },
+      {
+        "name": "col",
+        "syntax": "col=<bool>",
+        "description": "Specifies whether to add a new event, referred to as a summary event, at the bottom of the list of events.",
+        "default": "false"
+      },
+      {
+        "name": "fieldname",
+        "syntax": "fieldname=<field>",
+        "description": "Used to specify the name of the field that contains the calculated sum of the field-list for each event.",
+        "default": "Total"
+      },
+      {
+        "name": "labelfield",
+        "syntax": "labelfield=<field>",
+        "description": "Used to specify a field for the summary event label.",
+        "default": "none"
+      },
+      {
+        "name": "label",
+        "syntax": "label=<string>",
+        "description": "Used to specify a row label for the summary event.",
+        "default": "Total"
+      }
+    ]
+  },
+  "analyzefields": {
+    "description": "Using <field> as a discrete random variable, this command analyzes all numerical fields to determine the ability for each of those fields to predict the value of the classfield.",
+    "type": "Unknown",
+    "category": "ML & Analytics",
+    "syntax": "analyzefields classfield=<field>",
+    "required_args": [
+      {
+        "name": "classfield",
+        "syntax": "classfield=<field>",
+        "description": "For best results, classfield should have two distinct values, although multiclass analysis is possible."
+      }
+    ],
+    "optional_args": []
+  },
+  "anomalies": {
+    "description": "Use the anomalies command to look for events or field values that are unusual or unexpected. The anomalies command assigns an unexpectedness score to each event and places that score in a new field named unexpectedness.",
+    "type": "Unknown",
+    "category": "ML & Analytics",
+    "syntax": "anomalies [threshold=<num>] [labelonly=<bool>] [normalize=<bool>] [maxvalues=<num>] [field=<field>] [denylist=<filename>] [denylistthreshold=<num>] [by-clause]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "threshold",
+        "syntax": "threshold=<num>",
+        "description": "A number to represent the upper limit of expected or normal events.",
+        "default": "0.01"
+      },
+      {
+        "name": "labelonly",
+        "syntax": "labelonly=<bool>",
+        "description": "Specifies if you want the output result set to include all events or only the events that are above the threshold value.",
+        "default": "false"
+      },
+      {
+        "name": "normalize",
+        "syntax": "normalize=<bool>",
+        "description": "Specifies whether or not to normalize numeric text in the fields.",
+        "default": "true"
+      },
+      {
+        "name": "maxvalues",
+        "syntax": "maxvalues=<num>",
+        "description": "Specifies the size of the sliding set of previous events to include when determining the unexpectedness of a field value.",
+        "default": "100"
+      },
+      {
+        "name": "field",
+        "syntax": "field=<field>",
+        "description": "The field to analyze when determining the unexpectedness of an event.",
+        "default": "_raw"
+      },
+      {
+        "name": "denylist",
+        "syntax": "denylist=<filename>",
+        "description": "The name of a CSV file that contains a list of events that are expected and should be ignored."
+      },
+      {
+        "name": "denylistthreshold",
+        "syntax": "denylistthreshold=<num>",
+        "description": "Specifies a similarity score threshold for matching incoming events to denylisted events.",
+        "default": "0.05"
+      }
+    ]
+  },
+  "anomalousvalue": {
+    "description": "The anomalousvalue command computes an anomaly score for each field of each event, relative to the values of this field across other events. For numerical fields, it identifies or summarizes the values in the data that are anomalous either by frequency of occurrence or number of standard deviations from the mean.",
+    "type": "Unknown",
+    "category": "ML & Analytics",
+    "syntax": "anomalousvalue <av-options>... [action] [pthresh] [field-list]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "maxanofreq",
+        "syntax": "maxanofreq=<float>",
+        "description": "Maximum anomalous frequency is expressed as a floating point number between 0 and 1.",
+        "default": "0.05"
+      },
+      {
+        "name": "minnormfreq",
+        "syntax": "minnormfreq=<float>",
+        "description": "Minimum normal frequency is expressed as a floating point number between 0 and 1.",
+        "default": "0.01"
+      },
+      {
+        "name": "minsupcount",
+        "syntax": "minsupcount=<int>",
+        "description": "Minimum supported count must be a positive integer.",
+        "default": "100"
+      },
+      {
+        "name": "minsupfreq",
+        "syntax": "minsupfreq=<float>",
+        "description": "Minimum supported frequency is expressed as a floating point number between 0 and 1.",
+        "default": "0.05"
+      },
+      {
+        "name": "action",
+        "syntax": "action=annotate | filter | summary",
+        "description": "Specify whether to return the anomaly score (annotate), filter out events that are not anomalous values (filter), or return a summary of anomaly statistics (summary).",
+        "default": "filter"
+      },
+      {
+        "name": "pthresh",
+        "syntax": "pthresh=<num>",
+        "description": "Probability threshold (as a decimal) that has to be met for a value to be considered anomalous.",
+        "default": "0.01"
+      }
+    ]
+  },
+  "anomalydetection": {
+    "description": "A transforming command that identifies anomalous events by computing a probability for each event and then detecting unusually small probabilities. The probability is defined as the product of the frequencies of each individual field value in the event.",
+    "type": "Transforming",
+    "category": "ML & Analytics",
+    "syntax": "anomalydetection [<method-option>] [<action-option>] [<pthresh-option>] [<cutoff-option>] [<field-list>]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "method",
+        "syntax": "method = histogram | zscore | iqr",
+        "description": "Select the method of anomaly detection.",
+        "default": "method=histogram"
+      },
+      {
+        "name": "action",
+        "syntax": "action = filter | annotate | summary | remove | transform",
+        "description": "The actions and defaults depend on the method that you specify."
+      },
+      {
+        "name": "pthresh",
+        "syntax": "pthresh=<num>",
+        "description": "Used with method=histogram or method=zscore. Sets the probability threshold, as a decimal number, that has to be met for an event to be deemed anomalous."
+      },
+      {
+        "name": "cutoff",
+        "syntax": "cutoff=<bool>",
+        "description": "Sets the upper bound threshold on the number of anomalies. This option applies to only the histogram method.",
+        "default": "true"
+      }
+    ]
+  },
+  "append": {
+    "description": "Appends the results of a subsearch to the current results. The append command runs only over historical data and does not produce correct results if used in a real-time search.",
+    "type": "Transforming",
+    "category": "Data Manipulation",
+    "syntax": "append [<subsearch-options>...] <subsearch>",
+    "required_args": [
+      {
+        "name": "subsearch",
+        "syntax": "[subsearch]",
+        "description": "A secondary search where you specify the source of the events that you want to append. The subsearch must be enclosed in square brackets."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "extendtimerange",
+        "syntax": "extendtimerange=<boolean>",
+        "description": "Specifies whether to include the subsearch time range in the time range for the entire search.",
+        "default": "false"
+      },
+      {
+        "name": "maxtime",
+        "syntax": "maxtime=<int>",
+        "description": "The maximum time, in seconds, to spend on the subsearch before automatically finalizing.",
+        "default": "60"
+      },
+      {
+        "name": "maxout",
+        "syntax": "maxout=<int>",
+        "description": "The maximum number of result rows to output from the subsearch.",
+        "default": "50000"
+      }
+    ]
+  },
+  "appendcols": {
+    "description": "Appends the fields of the subsearch results with the input search results. All fields of the subsearch are combined into the current results, with the exception of internal fields.",
+    "type": "Unknown",
+    "category": "Data Manipulation",
+    "syntax": "appendcols [override=<bool> | <subsearch-options>...] <subsearch>",
+    "required_args": [
+      {
+        "name": "subsearch",
+        "syntax": "<subsearch>",
+        "description": "A secondary search added to the main search."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "override",
+        "syntax": "override=<bool>",
+        "description": "If the override argument is false, and if a field is present in both a subsearch result and the main result, the main result is used.",
+        "default": "false"
+      },
+      {
+        "name": "maxtime",
+        "syntax": "maxtime=<int>",
+        "description": "The maximum time, in units of seconds, to spend on the subsearch before automatically finalizing.",
+        "default": "60"
+      },
+      {
+        "name": "maxout",
+        "syntax": "maxout=<int>",
+        "description": "The maximum number of result rows to output from the subsearch.",
+        "default": "50000"
+      },
+      {
+        "name": "timeout",
+        "syntax": "timeout=<int>",
+        "description": "The maximum time, in units of seconds, to wait for subsearch to fully finish.",
+        "default": "60"
+      }
+    ]
+  },
+  "appendpipe": {
+    "description": "Appends the result of the subpipeline to the search results. Unlike a subsearch, the subpipeline is not run first. The subpipeline is run when the search reaches the appendpipe command.",
+    "type": "Unknown",
+    "category": "Data Manipulation",
+    "syntax": "appendpipe [run_in_preview=<bool>] [<subpipeline>]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "run_in_preview",
+        "syntax": "run_in_preview=<bool>",
+        "description": "Specifies whether or not display the impact of the appendpipe command in the preview.",
+        "default": "true"
+      },
+      {
+        "name": "subpipeline",
+        "syntax": "<subpipeline>",
+        "description": "A list of commands that are applied to the search results from the commands that occur in the search before the appendpipe command."
+      }
+    ]
+  },
+  "arules": {
+    "description": "The arules command looks for associative relationships between field values. The command returns a table with the following columns: Given fields, Implied fields, Strength, Given fields support, and Implied fields support.",
+    "type": "Streaming (Distributable & Centralized)",
+    "category": "Stats & Aggregation",
+    "syntax": "arules [<arules-option>...] <field-list>...",
+    "required_args": [
+      {
+        "name": "field-list",
+        "syntax": "<field> <field> ...",
+        "description": "The list of field names. At least two fields must be specified."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "sup",
+        "syntax": "sup=<int>",
+        "description": "Specify a support limit. Associations with computed support levels smaller than this value are not included in the output results.",
+        "default": "3"
+      },
+      {
+        "name": "conf",
+        "syntax": "conf=<float>",
+        "description": "Specify a confidence limit. Associations with a confidence (expressed as Strength field) are not included in the output results.",
+        "default": "0.5"
+      }
+    ]
+  },
+  "associate": {
+    "description": "The associate command identifies correlations between fields. The command tries to find a relationship between pairs of fields by calculating a change in entropy based on their values.",
+    "type": "Unknown",
+    "category": "Stats & Aggregation",
+    "syntax": "associate [<associate-options>...] [field-list]",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "supcnt",
+        "syntax": "supcnt=<num>",
+        "description": "Specifies the minimum number of times that the reference key=reference value combination must appear.",
+        "default": "100"
+      },
+      {
+        "name": "supfreq",
+        "syntax": "supfreq=<num>",
+        "description": "Specifies the minimum frequency of reference key=reference value combination as a fraction of the number of total events.",
+        "default": "0.1"
+      },
+      {
+        "name": "improv",
+        "syntax": "improv=<num>",
+        "description": "Specifies a limit, or minimum entropy improvement, for the target key.",
+        "default": "0.5"
+      }
+    ]
+  },
+  "autoregress": {
+    "description": "Prepares your events for calculating the autoregression, or the moving average, by copying one or more of the previous values for field into each event.",
+    "type": "Centralized Streaming",
+    "category": "Stats & Aggregation",
+    "syntax": "autoregress <field> [AS <newfield>] [p=<int> | p=<int>-<int>]",
+    "required_args": [
+      {
+        "name": "field",
+        "syntax": "<string>",
+        "description": "The name of a field. Most usefully a field with numeric values."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "p",
+        "syntax": "p=<int> | p=<int>-<int>",
+        "description": "Specifies which prior events to copy values from. You can specify a single integer or a numeric range.",
+        "default": "1"
+      },
+      {
+        "name": "newfield",
+        "syntax": "<field>",
+        "description": "If p is set to a single integer, the newfield argument specifies a field name to copy the single field value into."
+      }
+    ]
+  },
+  "awssnsalert": {
+    "description": "The awssnsalert command is used with the Splunk Add-on for AWS.",
+    "type": "Unknown",
+    "category": "Other",
+    "syntax": "awssnsalert",
+    "required_args": [],
+    "optional_args": []
+  },
+  "bin": {
+    "description": "Puts continuous numerical values into discrete sets, or bins, by adjusting the value of <field> so that all of the items in a particular set have the same value.",
+    "type": "Dataset Processing / Streaming",
+    "category": "Data Manipulation",
+    "syntax": "bin [<bin-options>...] <field> [AS <newfield>]",
+    "required_args": [
+      {
+        "name": "field",
+        "syntax": "<field>",
+        "description": "Specify a field name."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "bins",
+        "syntax": "bins=<int>",
+        "description": "Sets the maximum number of bins to discretize into.",
+        "default": "100"
+      },
+      {
+        "name": "minspan",
+        "syntax": "minspan=<span-length>",
+        "description": "Specifies the smallest span granularity to use automatically inferring span from the data time range."
+      },
+      {
+        "name": "span",
+        "syntax": "span = <log-span> | <span-length>",
+        "description": "Sets the size of each bin, using a span length based on a logarithm-based span or based on time."
+      },
+      {
+        "name": "start",
+        "syntax": "start=<num>",
+        "description": "Sets the minimum extents for numerical bins."
+      },
+      {
+        "name": "end",
+        "syntax": "end=<num>",
+        "description": "Sets the maximum extents for numerical bins."
+      },
+      {
+        "name": "aligntime",
+        "syntax": "aligntime=(earliest | latest | <time-specifier>)",
+        "description": "Align the bin times to something other than base UTC time (epoch 0)."
+      }
+    ]
+  },
+  "bucket": {
+    "description": "The bucket command is an alias for the bin command.",
+    "type": "Dataset Processing / Streaming",
+    "category": "Data Manipulation",
+    "syntax": "bucket [<bin-options>...] <field> [AS <newfield>]",
+    "required_args": [
+      {
+        "name": "field",
+        "syntax": "<field>",
+        "description": "Specify a field name."
+      }
+    ],
+    "optional_args": []
+  },
+  "bucketdir": {
+    "description": "Replaces a field value with higher-level grouping, such as replacing filenames with directories. Returns the maxcount events, by taking the incoming events and rolling up multiple sources into directories.",
+    "type": "Streaming",
+    "category": "Data Manipulation",
+    "syntax": "bucketdir pathfield=<field> sizefield=<field> [maxcount=<int>] [countfield=<field>] [sep=<char>]",
+    "required_args": [
+      {
+        "name": "pathfield",
+        "syntax": "pathfield=<field>",
+        "description": "Specify a field name that has a path value."
+      },
+      {
+        "name": "sizefield",
+        "syntax": "sizefield=<field>",
+        "description": "Specify a numeric field that defines the size of bucket."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "countfield",
+        "syntax": "countfield=<field>",
+        "description": "Specify a numeric field that describes the count of events."
+      },
+      {
+        "name": "maxcount",
+        "syntax": "maxcount=<int>",
+        "description": "Specify the total number of events to bucket."
+      },
+      {
+        "name": "sep",
+        "syntax": "<char>",
+        "description": "The separating character. Specify either a forward slash / or double back slashes \\\\."
+      }
+    ]
+  },
+  "chart": {
+    "description": "The chart command is a transforming command that returns your results in a table format. The results can then be used to display the data as a chart, such as a column, line, area, or pie chart.",
+    "type": "Transforming",
+    "category": "Visualization",
+    "syntax": "chart [<chart-options>] [agg=<stats-agg-term>] (<stats-agg-term> | <sparkline-agg-term> | \"(<eval-expression>)\")... [BY <row-split> <column-split>] | [OVER <row-split>] [BY <column-split>] [<dedup_splitvals>]",
+    "required_args": [
+      {
+        "name": "stats-agg-term OR sparkline-agg-term OR eval-expression",
+        "syntax": "<stats-func>(<evaled-field> | <wc-field>) [AS <wc-field>] | <sparkline-agg> [AS <wc-field>] | (<eval-expression>)",
+        "description": "A statistical aggregation function, sparkline aggregation function, or eval expression."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "agg",
+        "syntax": "agg=<stats-agg-term>",
+        "description": "Specify an aggregator or function."
+      },
+      {
+        "name": "cont",
+        "syntax": "cont=<bool>",
+        "description": "Specifies if the bins are continuous.",
+        "default": "true"
+      },
+      {
+        "name": "format",
+        "syntax": "format=<string>",
+        "description": "Used to construct output field names when multiple data series are used in conjunction with a split-by-field."
+      },
+      {
+        "name": "limit",
+        "syntax": "limit=(top | bottom) <int>",
+        "description": "Only valid when a column-split is specified. Use the limit option to specify the number of results that should appear in the output.",
+        "default": "top 10"
+      },
+      {
+        "name": "sep",
+        "syntax": "sep=<string>",
+        "description": "Used to construct output field names when multiple data series are used in conjunctions with a split-by field."
+      },
+      {
+        "name": "dedup_splitvals",
+        "syntax": "dedup_splitvals=<boolean>",
+        "description": "Specifies whether to remove duplicate values in multivalued BY clause fields.",
+        "default": "false"
+      }
+    ]
+  },
+  "cluster": {
+    "description": "The cluster command groups events together based on how similar they are to each other. Unless you specify a different field, cluster groups events based on the contents of the _raw field.",
+    "type": "Streaming / Dataset Processing",
+    "category": "ML & Analytics",
+    "syntax": "cluster [slc-options]...",
+    "required_args": [],
+    "optional_args": [
+      {
+        "name": "t",
+        "syntax": "t=<num>",
+        "description": "Sets the cluster threshold, which controls the sensitivity of the clustering.",
+        "default": "0.8"
+      },
+      {
+        "name": "delims",
+        "syntax": "delims=<string>",
+        "description": "Configures the set of delimiters used to tokenize the raw string."
+      },
+      {
+        "name": "showcount",
+        "syntax": "showcount=<bool>",
+        "description": "If showcount=false, indexers cluster its own events before clustering on the search head.",
+        "default": "false"
+      },
+      {
+        "name": "countfield",
+        "syntax": "countfield=<field>",
+        "description": "Name of the field to which the cluster size is to be written if showcount=true is true.",
+        "default": "cluster_count"
+      },
+      {
+        "name": "labelfield",
+        "syntax": "labelfield=<field>",
+        "description": "Name of the field to write the cluster number to.",
+        "default": "cluster_label"
+      },
+      {
+        "name": "field",
+        "syntax": "field=<field>",
+        "description": "Name of the field to analyze in each event.",
+        "default": "_raw"
+      },
+      {
+        "name": "labelonly",
+        "syntax": "labelonly=<bool>",
+        "description": "Select whether to preserve incoming events and annotate them with the cluster they belong to (labelonly=true) or output only the cluster fields as new events (labelonly=false).",
+        "default": "false"
+      },
+      {
+        "name": "match",
+        "syntax": "match=(termlist | termset | ngramset)",
+        "description": "Select the method used to determine the similarity between events.",
+        "default": "termlist"
+      }
+    ]
+  },
+  "cofilter": {
+    "description": "Use this command to determine how many times a value in <field1> and a value in <field2> occur together. This command implements one step in a collaborative filtering analysis for making recommendations.",
+    "type": "Transforming",
+    "category": "Stats & Aggregation",
+    "syntax": "cofilter <field1> <field2>",
+    "required_args": [
+      {
+        "name": "field1",
+        "syntax": "<field>",
+        "description": "The name of field."
+      },
+      {
+        "name": "field2",
+        "syntax": "<field>",
+        "description": "The name of a field."
+      }
+    ],
+    "optional_args": []
+  },
+  "collect": {
+    "description": "Adds the results of a search to a summary index that you specify. You must create the summary index before you invoke the collect command.",
+    "type": "Unknown",
+    "category": "Data Export",
+    "syntax": "collect index=<string> [<arg-options>...]",
+    "required_args": [
+      {
+        "name": "index",
+        "syntax": "index=<string>",
+        "description": "Name of the summary index where the events are added. The index must exist before the events are added."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "addinfo",
+        "syntax": "addinfo=<bool>",
+        "description": "Use this option to specify whether to prefix search time and time-range information fields on to each summary index event.",
+        "default": "true (events index/raw), false (metrics index)"
+      },
+      {
+        "name": "addtime",
+        "syntax": "addtime=<bool>",
+        "description": "Use this option to specify whether to prefix a time field on to each event.",
+        "default": "true (events index), false (metrics index)"
+      },
+      {
+        "name": "file",
+        "syntax": "file=<string>",
+        "description": "The file name where you want the events to be written.",
+        "default": "<random-number>_events.stash"
+      },
+      {
+        "name": "host",
+        "syntax": "host=<string>",
+        "description": "The name of the host that you want to specify for the events."
+      },
+      {
+        "name": "marker",
+        "syntax": "marker=<string>",
+        "description": "A string, usually of key-value pairs, to append to each event written out."
+      },
+      {
+        "name": "output_format",
+        "syntax": "output_format=[raw | hec]",
+        "description": "Specifies the output format for the summary indexing.",
+        "default": "raw"
+      },
+      {
+        "name": "run_in_preview",
+        "syntax": "run_in_preview=<bool>",
+        "description": "Controls whether the collect command is enabled during preview generation.",
+        "default": "false"
+      },
+      {
+        "name": "spool",
+        "syntax": "spool=<bool>",
+        "description": "If set to true, the summary indexing file is written to the Splunk spool directory.",
+        "default": "true"
+      },
+      {
+        "name": "source",
+        "syntax": "source=<string>",
+        "description": "The name of the source that you want to specify for the events."
+      },
+      {
+        "name": "sourcetype",
+        "syntax": "sourcetype=<string>",
+        "description": "The name of the source type that you want to specify for the events.",
+        "default": "stash"
+      },
+      {
+        "name": "testmode",
+        "syntax": "testmode=<bool>",
+        "description": "Toggle between testing and real mode.",
+        "default": "false"
+      },
+      {
+        "name": "timeformat",
+        "syntax": "timeformat=<string>",
+        "description": "Controls the format of the timestamp that is written to the stash file before it is indexed.",
+        "default": "%m/%d/%Y %H:%M:%S %z"
+      },
+      {
+        "name": "uselb",
+        "syntax": "uselb=<bool>",
+        "description": "Controls how line breaks are used to split events.",
+        "default": "true"
+      }
+    ]
+  },
+  "concurrency": {
+    "description": "Page not accessible - ERR_SOCKET_NOT_CONNECTED",
+    "type": "Unknown",
+    "category": "Other",
+    "syntax": "concurrency",
+    "required_args": [],
+    "optional_args": []
+  },
+  "contingency": {
+    "description": "Page not accessible - ERR_SOCKET_NOT_CONNECTED",
+    "type": "Unknown",
+    "category": "Other",
+    "syntax": "contingency",
+    "required_args": [],
+    "optional_args": []
+  },
+  "convert": {
+    "description": "The convert command converts field values in your search results into numerical values. Unless you use the AS clause, the original values are replaced by the new values.",
+    "type": "Distributable Streaming",
+    "category": "Data Manipulation",
+    "syntax": "convert [timeformat=string] (<convert-function> [AS <field>])...",
+    "required_args": [
+      {
+        "name": "convert-function",
+        "syntax": "auto() | ctime() | dur2sec() | memk() | mktime() | mstime() | none() | num() | rmcomma() | rmunit()",
+        "description": "Functions to use for the conversion."
+      }
+    ],
+    "optional_args": [
+      {
+        "name": "timeformat",
+        "syntax": "timeformat=<string>",
+        "description": "Specify the output format for the converted time field. The timeformat option is used by ctime and mktime functions.",
+        "default": "%m/%d/%Y %H:%M:%S"
+      },
+      {
+        "name": "field",
+        "syntax": "<string>",
+        "description": "Creates a new field with the name you specify to place the converted values into."
+      }
+    ]
+  }
+}

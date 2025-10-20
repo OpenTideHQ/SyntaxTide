@@ -1,0 +1,87 @@
+# delete
+
+## Description
+
+Using the `delete` command marks all of the events returned by the search as deleted. Subsequent searches do not return the marked events. No user, not even a user with admin permissions, is able to view this data after deletion. The delete command does not reclaim disk space.
+
+CAUTION: Removing data is irreversible. If you want to get your data back after the data is deleted, you must re-index the applicable data sources.
+
+You cannot run the `delete` command in a real-time search to delete events as they arrive.
+
+CAUTION: This command is considered risky because, if used incorrectly, it can pose a security risk or potentially lose data when it runs. As a result, this command triggers SPL safeguards. See [SPL safeguards for risky commands](/en/?resourceId=Splunk_Security_SPLsafeguards) in *Securing the Splunk Platform*.
+
+## Syntax
+
+delete
+
+## Usage
+
+The `delete` command can be accessed only by a user with the "delete\_by\_keyword" [capability](https://docs.splunk.com/Splexicon:Capability). By default, only the "can\_delete" role has the ability to delete events. No other role, including the admin role, has this ability. You should create a special userid that you log on with when you intend to delete indexed data.
+
+To use the `delete` command, run a search that returns the events you want deleted. Make sure that the search returns ONLY the events that you want to delete, and no other events. After you confirm that the results contain the data that you want to delete, pipe the search to the `delete` command.
+
+The `delete` command does not trigger a roll of hot buckets to warm in the affected indexes.
+
+The output of the `delete` command is a table of the quantity of events removed by the fields splunk\_server (the name of the indexer or search head), and index, as well as a rollup record for each server by index "\_\_ALL\_\_". The quantity of deleted events is in the *deleted* field. An *errors* field is also emitted, which will normally be 0.
+
+### Delete command restrictions
+
+The `delete` command does not work in all situations:
+
+Searches with centralized streaming commands.
+
+You cannot use the delete command after a centralized streaming command. For example, you can't delete events using a search like this:
+
+index=myindex ... | head 100 | delete
+
+Centralized streaming commands include: [head](/splunk-enterprise/search/spl-search-reference/10.0/search-commands/head#id_59ebb3d9_7e57_4ad1_8457_3c04ef2acbe4__head), [streamstats](/splunk-enterprise/search/spl-search-reference/10.0/search-commands/streamstats#a22cb219_4252_47d8_9045_2df835669c52__streamstats), some modes of [dedup](/splunk-enterprise/search/spl-search-reference/10.0/search-commands/dedup#cc343630_62b6_453c_a08d_39c99aa852df__dedup), and some modes of [cluster](/splunk-enterprise/search/spl-search-reference/10.0/search-commands/cluster#f12261ed_44f0_4d76_9e81_783f4f78e328__cluster). See [Command types](/splunk-enterprise/search/spl-search-reference/10.0/quick-reference/command-types#a7189144_fdbc_4890_949d_4657d94c2778__Command_types).
+
+Events with an `index` field.
+
+If your events contain a field named `index` aside from the default `index` field that is applied to all events. If your events do contain an additional `index` field, you can use `eval` before invoking `delete`, as in this example:
+
+index=fbus\_summary latest=1417356000 earliest=1417273200 | eval index = "fbus\_summary" | delete
+
+### Permanently removing data from an index
+
+The `delete` command does not remove the data from your disk space. You must use the `clean` command from the CLI to permanently remove the data. The `clean` command removes all of the data in an index. You cannot select the specific data that you want to remove. See [Remove indexes and indexed data](/en/?resourceId=Splunk_Indexer_RemovedatafromSplunk) in *Managing Indexers and Clusters of Indexers*.
+
+## Examples
+
+### 1. Delete events with Social Security numbers
+
+Delete the events from the `insecure` index that contain strings that look like Social Security numbers. Use the `regex`  command to identify events that contain the strings that you want to match.
+
+1. Run the following search to ensure that you are retrieving the correct data from the `insecure` index.
+
+   index=insecure | regex \_raw = "\d{3}-\d{2}-\d{4}"
+2. If necessary, adjust the search to retrieve the correct data. Then add the  `delete` command to the end of the search to delete the events.
+
+   index=insecure | regex \_raw = "\d{3}-\d{2}-\d{4}" | delete
+
+### 2. Delete events that contain a specific word
+
+Delete events from the `imap` index that contain the word `invalid`.
+
+index=imap invalid | delete
+
+### 3. Remove the Search Tutorial events
+
+Remove all of the Splunk Search Tutorial events from your index.
+
+1. Login as a user with an administrator role:
+   * For Splunk Cloud Platform, the role is `sc_admin`.
+   * For Splunk Enterprise, the role is `admin`.
+2. Click Settings > Users and create a new user with the `can_delete` role.
+3. Log out as the administrator and log back in as the user with the `can_delete` role.
+4. Set the time range picker to `All time`.
+5. Run the following search to retrieve all of the Search Tutorial events.
+
+   source=tutorialdata.zip:\*
+6. Confirm that the search is retrieving the correct data.
+7. Add the `delete` command to the end of the search criteria and run the search again.
+
+   source=tutorialdata.zip:\* | delete
+
+   The events are removed from the index.
+8. Log out as the user with the `can_delete` role.

@@ -1,0 +1,32 @@
+{
+  "sections": [
+    {
+      "name": "Introduction",
+      "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.0/introduction/understanding-spl-syntax"
+    },
+    {
+      "name": "Quick Reference",
+      "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.0/quick-reference/splunk-quick-reference-guide"
+    },
+    {
+      "name": "Evaluation Functions",
+      "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.0/evaluation-functions/evaluation-functions"
+    },
+    {
+      "name": "Statistical and Charting Functions",
+      "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.0/statistical-and-charting-functions/statistical-and-charting-functions"
+    },
+    {
+      "name": "Time Format Variables and Modifiers",
+      "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.0/time-format-variables-and-modifiers/date-and-time-format-variables"
+    },
+    {
+      "name": "Search Commands",
+      "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.0/search-commands/abstract"
+    },
+    {
+      "name": "Internal Commands",
+      "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.0/internal-commands/about-internal-commands"
+    }
+  ]
+}
