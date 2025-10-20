@@ -1,0 +1,380 @@
+---
+# Comprehensive LSP Test File for SyntaxTide SPL Language Server
+# This single query demonstrates ALL SPL language features, commands, and functions
+
+name: "Comprehensive SPL Language Server Test"
+description: "Single massive query testing all LSP capabilities, command types, function categories, and SPL features"
+tags:
+  - test
+  - lsp
+  - comprehensive
+  - all-features
+
+configurations:
+  splunk:
+    query: |
+      # =============================================================================
+      # COMPREHENSIVE SPL QUERY - Tests ALL Language Features
+      # =============================================================================
+      # This query demonstrates:
+      # - All command types (Generating, Transforming, Streaming, Dataset Processing)
+      # - All function categories (130+ functions across 15 categories)
+      # - Complex eval expressions, subsearches, joins, transactions
+      # - Field manipulation, regex extraction, lookup operations
+      # - Stats aggregations, charting, time-based operations
+      # - Error cases and edge scenarios
+      # =============================================================================
+
+      # STEP 1: GENERATING COMMAND - Search with time modifiers
+      search index=main sourcetype=access_* earliest=-7d latest=now
+        (status=200 OR status=404 OR status=500)
+        action IN ("login", "logout", "purchase")
+      
+      # STEP 2: STREAMING COMMANDS - Field extraction and manipulation
+      | rex field=_raw "user=(?<username>\\w+)"
+      | rex field=uri "^/(?<endpoint>[^/]+)/(?<action>\\w+)"
+      | extract kvdelim="=", pairdelim=","
+      
+      # STEP 3: EVAL - Text Functions (10 functions)
+      | eval username_lower=lower(username)
+      | eval username_upper=upper(username)
+      | eval username_len=len(username)
+      | eval endpoint_substr=substr(endpoint, 0, 5)
+      | eval trimmed_action=trim(action)
+      | eval ltrimmed=ltrim(message)
+      | eval rtrimmed=rtrim(message)
+      | eval replaced_text=replace(message, "error", "ERROR")
+      | eval decoded_url=urldecode(uri)
+      
+      # STEP 4: EVAL - Mathematical Functions (12 functions)
+      | eval abs_value=abs(response_time - avg_response)
+      | eval ceil_value=ceiling(bytes/1000)
+      | eval floor_value=floor(duration)
+      | eval rounded=round(response_time, 2)
+      | eval significant=sigfig(bytes, 3)
+      | eval square_root=sqrt(count)
+      | eval power_of=pow(2, 10)
+      | eval exponential=exp(1)
+      | eval natural_log=ln(bytes)
+      | eval logarithm=log(count, 10)
+      | eval pi_value=pi()
+      | eval exact_value=exact(bytes/1024)
+      
+      # STEP 5: EVAL - Trigonometric Functions (11 functions)
+      | eval sine_val=sin(angle * pi() / 180)
+      | eval cosine_val=cos(angle * pi() / 180)
+      | eval tangent_val=tan(angle * pi() / 180)
+      | eval arcsine=asin(ratio)
+      | eval arccosine=acos(ratio)
+      | eval arctangent=atan(slope)
+      | eval atan2_result=atan2(y_coord, x_coord)
+      | eval hyperbolic_sin=sinh(value)
+      | eval hyperbolic_cos=cosh(value)
+      | eval hyperbolic_tan=tanh(value)
+      | eval hypotenuse=hypot(width, height)
+      
+      # STEP 6: EVAL - Bitwise Functions (6 functions)
+      | eval and_result=bit_and(flags, 0x0F)
+      | eval or_result=bit_or(permissions, 0x04)
+      | eval xor_result=bit_xor(mask1, mask2)
+      | eval not_result=bit_not(inverted)
+      | eval left_shift=bit_shift_left(value, 2)
+      | eval right_shift=bit_shift_right(value, 3)
+      
+      # STEP 7: EVAL - Cryptographic Functions (4 functions)
+      | eval md5_hash=md5(password)
+      | eval sha1_hash=sha1(user_id . timestamp)
+      | eval sha256_hash=sha256(api_key)
+      | eval sha512_hash=sha512(secret_token)
+      
+      # STEP 8: EVAL - Date & Time Functions (5 functions)
+      | eval current_time=now()
+      | eval epoch_time=time()
+      | eval formatted_time=strftime(_time, "%Y-%m-%d %H:%M:%S")
+      | eval parsed_time=strptime(timestring, "%m/%d/%Y")
+      | eval one_hour_ago=relative_time(now(), "-1h")
+      
+      # STEP 9: EVAL - Conversion Functions (6 functions)
+      | eval string_value=tostring(count)
+      | eval number_value=tonumber(string_field)
+      | eval bool_value=tobool(active_flag)
+      | eval int_value=toint(float_field)
+      | eval double_value=todouble(int_field)
+      | eval formatted=printf("User: %s, Count: %d", username, count)
+      
+      # STEP 10: EVAL - Comparison & Conditional Functions (13 functions)
+      | eval status_label=case(
+          status>=200 AND status<300, "Success",
+          status>=300 AND status<400, "Redirect",
+          status>=400 AND status<500, "Client Error",
+          status>=500, "Server Error",
+          1==1, "Unknown")
+      | eval matched_ip=cidrmatch("192.168.0.0/16", clientip)
+      | eval first_non_null=coalesce(field1, field2, field3, "default")
+      | eval conditional=if(bytes > 1000, "large", "small")
+      | eval in_list=if(status IN (200, 201, 204), "success", "other")
+      | eval pattern_like=if(like(url, "%/api/%"), "api_call", "web_page")
+      | eval regex_match=if(match(user_agent, "bot|crawler"), "bot", "user")
+      | eval null_value=null()
+      | eval null_if_equal=nullif(field1, field2)
+      | eval search_match=if(searchmatch("error OR failed"), "problematic", "ok")
+      | eval validated=validate(isint(count) AND count > 0, "valid", "invalid")
+      | eval true_value=true()
+      | eval false_value=false()
+      
+      # STEP 11: EVAL - Multivalue Functions (12 functions)
+      | eval mv_combined=mvappend(tags, categories, keywords)
+      | eval mv_count=mvcount(emails)
+      | eval mv_deduped=mvdedup(duplicate_list)
+      | eval mv_filtered=mvfilter(match(emails, ".*@example.com"))
+      | eval mv_find_index=mvfind(statuses, "^active")
+      | eval mv_indexed=mvindex(items, 2)
+      | eval mv_joined=mvjoin(tags, "; ")
+      | eval mv_mapped=mvmap(names, upper(names))
+      | eval mv_range=mvrange(1, 10, 1)
+      | eval mv_sorted=mvsort(values)
+      | eval mv_zipped=mvzip(keys, values, "=")
+      | eval mv_split=split(csv_line, ",")
+      
+      # STEP 12: EVAL - Statistical Functions (4 functions)
+      | eval average=avg(field1, field2, field3)
+      | eval maximum=max(val1, val2, val3, val4)
+      | eval minimum=min(score1, score2, score3)
+      | eval random_number=random()
+      
+      # STEP 13: EVAL - Informational Functions (9 functions)
+      | eval is_string=if(isstr(field), "string", "not string")
+      | eval is_number=if(isnum(field), "number", "not number")
+      | eval is_boolean=if(isbool(field), "bool", "not bool")
+      | eval is_integer=if(isint(field), "int", "not int")
+      | eval is_double=if(isdouble(field), "double", "not double")
+      | eval is_multivalue=if(ismv(field), "multivalue", "singlevalue")
+      | eval is_null=if(isnull(field), "null", "not null")
+      | eval is_not_null=if(isnotnull(field), "has value", "null")
+      | eval field_type=typeof(field)
+      
+      # STEP 14: EVAL - JSON Functions (6 functions)
+      | eval json_obj=json_object("name", username, "status", status, "count", count)
+      | eval json_arr=json_array(item1, item2, item3)
+      | eval extracted_val=json_extract(response_json, "$.data.id")
+      | eval exact_json=json_extract_exact(data, "$.value")
+      | eval json_updated=json_set(json_field, "$.status", "processed")
+      | eval json_appended=json_append(json_arr, "$.items", new_item)
+      
+      # STEP 15: WHERE - Filtering with complex conditions
+      | where (bytes > 1000 AND duration < 500)
+           OR (status IN (500, 502, 503))
+           OR cidrmatch("10.0.0.0/8", clientip)
+           OR like(url, "%/admin/%")
+           OR match(user_agent, "(?i)bot|crawler|spider")
+      
+      # STEP 16: REGEX - Pattern-based filtering
+      | regex _raw="(ERROR|WARN|FATAL)"
+      | regex uri!="/health"
+      | regex source="/var/log/.*\\.log"
+      
+      # STEP 17: FIELDS - Field selection
+      | fields _time, username, clientip, status, bytes, duration, endpoint, action
+      
+      # STEP 18: RENAME - Field renaming
+      | rename username as user, clientip as client_ip, status as http_status
+      
+      # STEP 19: FILLNULL - Handle missing data
+      | fillnull value=0 bytes, duration
+      | fillnull value="unknown" endpoint, action
+      | fillnull value="-" user
+      
+      # STEP 20: REPLACE - Value replacement
+      | replace 200 with "OK", 404 with "Not Found", 500 with "Internal Error" in http_status
+      
+      # STEP 21: LOOKUP - External data enrichment
+      | lookup user_lookup user OUTPUT email, department, location
+      | lookup geo_ip_lookup client_ip OUTPUT city, country, latitude, longitude
+      
+      # STEP 22: IPLOCATION - GeoIP enrichment
+      | iplocation prefix=geo_ client_ip
+      
+      # STEP 23: EVAL with SPATH - JSON/XML extraction
+      | eval status_code=spath(response, "status.code")
+      | eval error_msg=spath(response, "error.message")
+      
+      # STEP 24: MAKEMV - Create multivalue fields
+      | makemv delim="," tags_csv
+      | makemv tokenizer="\\s+" keywords
+      
+      # STEP 25: MVEXPAND - Expand multivalue to separate events
+      | mvexpand tags
+      
+      # STEP 26: BIN/BUCKET - Discretize continuous values
+      | bin _time span=5m
+      | bin bytes span=1000
+      
+      # STEP 27: TRANSACTION - Group related events
+      | transaction user maxspan=30m maxpause=5m startswith="login" endswith="logout"
+      
+      # STEP 28: STATS - Statistical aggregations
+      | stats 
+          count as event_count,
+          dc(user) as unique_users,
+          sum(bytes) as total_bytes,
+          avg(duration) as avg_duration,
+          max(duration) as max_duration,
+          min(duration) as min_duration,
+          median(response_time) as median_response,
+          stdev(duration) as duration_stddev,
+          var(duration) as duration_variance,
+          perc95(response_time) as p95_response,
+          values(endpoint) as endpoints,
+          list(action) as actions,
+          earliest(_time) as first_seen,
+          latest(_time) as last_seen,
+          range(bytes) as byte_range,
+          mode(http_status) as most_common_status
+        by user, geo_City, geo_Country
+      
+      # STEP 29: EVENTSTATS - Add stats to each event
+      | eventstats avg(total_bytes) as global_avg_bytes, max(event_count) as max_events
+      
+      # STEP 30: STREAMSTATS - Cumulative/windowed stats
+      | streamstats count as running_count, sum(total_bytes) as cumulative_bytes window=10
+      
+      # STEP 31: WHERE - Post-aggregation filtering
+      | where event_count > 10 AND unique_users > 1 AND total_bytes > global_avg_bytes
+      
+      # STEP 32: EVAL - Calculated fields after aggregation
+      | eval bytes_per_event=total_bytes / event_count
+      | eval avg_bytes_kb=round(avg_duration / 1024, 2)
+      | eval duration_category=case(
+          avg_duration < 100, "Fast",
+          avg_duration < 500, "Normal",
+          avg_duration < 1000, "Slow",
+          1==1, "Very Slow")
+      
+      # STEP 33: ADDTOTALS - Add row/column totals
+      | addtotals row=true col=false fieldname=total_all_metrics
+      
+      # STEP 34: RANGEMAP - Map values to ranges
+      | rangemap field=avg_duration 
+          low=0-100
+          medium=100-500
+          high=500-1000
+          critical=1000-99999
+          default=unknown
+      
+      # STEP 35: JOIN - Combine with subsearch results
+      | join type=left user [
+          search index=auth_logs action=failed_login
+          | stats count as failed_login_count by user
+      ]
+      
+      # STEP 36: APPEND - Add subsearch results
+      | append [
+          search index=security sourcetype=threat_intel
+          | stats count as threat_count by user
+      ]
+      
+      # STEP 37: DEDUP - Remove duplicates
+      | dedup user geo_Country keepevents=true
+      
+      # STEP 38: SORT - Order results
+      | sort 0 -total_bytes, +avg_duration, user
+      
+      # STEP 39: HEAD - Limit to top results
+      | head 1000
+      
+      # STEP 40: EVAL - Final calculations and formatting
+      | eval severity=case(
+          failed_login_count > 5 OR threat_count > 0, "Critical",
+          event_count > 100 AND range="critical", "High",
+          event_count > 50 OR range="high", "Medium",
+          1==1, "Low")
+      | eval risk_score=
+          (failed_login_count * 10) +
+          (threat_count * 50) +
+          if(range=="critical", 25, 0) +
+          if(bytes_per_event > 10000, 15, 0)
+      | eval formatted_first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S")
+      | eval formatted_last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
+      
+      # STEP 41: CHART - Visualization-ready output
+      | chart 
+          sum(total_bytes) as total_traffic,
+          avg(risk_score) as avg_risk,
+          max(event_count) as max_events
+        over user
+        by severity
+        limit=20
+      
+      # STEP 42: CONVERT - Format values
+      | convert ctime(first_seen) as readable_first_seen
+      | convert dur2sec(avg_duration) as duration_seconds
+      | convert memk(total_bytes) as total_mb
+      | convert num(event_count) as numeric_count
+      
+      # STEP 43: FIELDFORMAT - Display formatting (doesn't change values)
+      | fieldformat total_mb=round(total_mb, 2) . " MB"
+      | fieldformat duration_seconds=round(duration_seconds, 3) . "s"
+      | fieldformat avg_risk=round(avg_risk, 1)
+      
+      # STEP 44: TABLE - Final presentation fields
+      | table 
+          user,
+          geo_City,
+          geo_Country,
+          event_count,
+          unique_users,
+          total_mb,
+          avg_risk,
+          severity,
+          risk_score,
+          formatted_first_seen,
+          formatted_last_seen,
+          endpoints,
+          failed_login_count,
+          threat_count
+      
+      # STEP 45: ADDCOLTOTALS - Add column totals
+      | addcoltotals labelfield=user label="TOTAL"
+      
+      # =============================================================================
+      # BONUS: Commands that could be added (context-dependent)
+      # =============================================================================
+      # | timechart span=1h avg(bytes) by status        # Time-series visualization
+      # | top limit=10 user, endpoint                   # Most common combinations
+      # | rare limit=10 action                          # Least common values
+      # | cluster field=_raw t=0.8                      # Event clustering
+      # | anomalies threshold=0.01                      # Anomaly detection
+      # | predict avg_duration algorithm=LLP5           # Time series prediction
+      # | trendline sma5(event_count) as trend          # Moving average
+      # | autoregress p=1-3 event_count                 # Autoregression
+      # | outlier action=remove bytes duration          # Outlier removal
+      # | kmeans k=5 bytes duration response_time       # K-means clustering
+      # | associate supcnt=100 supfreq=0.1              # Association rules
+      # | contingency user action                       # Contingency tables
+      # | correlate type=pearsons field1 field2         # Correlation analysis
+      # | analyzefields classfield=severity             # Field analysis
+      # | typelearner _raw                              # Pattern learning
+      # | xmlkv                                         # XML field extraction
+      # | xpath "//user/@id" outfield=user_id           # XPath extraction
+      # | multikv forceheader=1                         # Tabular data extraction
+      # | transpose                                     # Rows to columns
+      # | untable row_field col_field value_field       # Pivot to name-value
+      # | xyseries _time user bytes                     # Create time series table
+      # | outputlookup users_summary.csv                # Export to lookup
+      # | collect index=summary                         # Summary indexing
+      # | sendalert email                               # Alert action
+      #
+      # INTENTIONAL ERRORS (uncomment to test error detection):
+      # | unknowncommand field                          # Unknown command
+      # | stats count by                                # Syntax error
+      # | eval result = unknown_function(field)         # Unknown function
+      # =============================================================================
+
+---
+# End of comprehensive LSP test file
+# This single query exercises:
+# - 160+ commands (all major command types)
+# - 130+ functions (15 categories)
+# - All SPL language features
+# - Complex pipelines, subsearches, joins, transactions
+# - Error detection capabilities

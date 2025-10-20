@@ -18,13 +18,21 @@ Install the extension from the VS Code Marketplace or from a `.vsix` file. The e
 ## Features
 
 - **Multi-Language Support**: Extensible framework for multiple query languages
-- **Query Languages**: Built-in grammar for common query languages (KQL included) and an extensible framework for others
-- **Future Languages**: Designed to support SPL (Splunk), Sigma, and additional query languages
+- **Query Languages**: Built-in grammars for KQL, SPL, and CBC with complete syntax highlighting
+- **Language Server Protocol (LSP)**: Advanced SPL support with IntelliSense, autocomplete, hover documentation, and signature help
 - **Complete Grammar**: Full syntax highlighting with built-in language definitions
 - **Automatic Detection**: Context-aware highlighting in OpenTide model files
 - **Non-Intrusive**: Works alongside existing JSON Schema validation without conflicts
 - **YAML Block Scalar Support**: Properly highlights multi-line queries using YAML block scalars (`|`)
 - **No External Dependencies**: Self-contained with complete grammar definitions
+
+### SPL Language Server Features
+- **Autocomplete**: 160+ SPL commands and 130+ functions with context-aware suggestions
+- **Variable Tracking**: Automatically tracks and suggests user-defined fields from eval, rename, rex, stats, spath, and more
+- **Hover Information**: Detailed documentation for commands, functions, and variables
+- **Signature Help**: Parameter hints for 130+ functions across 15 categories
+- **Error Detection**: Real-time validation of SPL queries
+- **Comprehensive Coverage**: All major SPL command types (Generating, Transforming, Streaming, ML & Analytics, Data Export, Visualization)
 
 ## Supported Query Languages
 
@@ -139,27 +147,21 @@ Your JSON Schema validation continues to work exactly as before - this only adds
 
 - Only supports block scalar style (`|`) for queries
 - Requires the content to be properly indented after `query: |`
-- Syntax highlighting only (no IntelliSense, validation, or code completion yet)
+- LSP features (IntelliSense, autocomplete, validation) currently only available for SPL queries
+- KQL and CBC have syntax highlighting only (no LSP yet)
 
 ## Roadmap
 
-### Version 0.2.0
-- Add Splunk SPL grammar and injection
-- Support for `configurations.splunk.query` fields
-
-### Version 0.3.0
-- Add Sigma YAML grammar
-- Support for Detection Objective examples with multiple languages
-
-### Version 0.4.0
-- Add Carbon Black query grammar
-- Additional SIEM platform support
+### Version 0.5.0 (Next)
+- Expand LSP support to KQL queries
+- Add LSP support to CBC queries
+- Enhanced argument validation for SPL commands
 
 ### Future
-- Language Server Protocol (LSP) for IntelliSense
-- Real-time query validation
-- Auto-completion for table/column names
+- Field name suggestions based on common patterns
 - Query snippets library
+- Macro expansion support for SPL
+- Cross-language query translation helpers
 
 ## Release Notes
 

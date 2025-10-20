@@ -1,0 +1,84 @@
+---
+# LSP Test File for SyntaxTide SPL Language Server
+# This file tests all major LSP features: autocomplete, hover, validation, and signature help
+
+name: "Test Detection Rule - LSP Features Demo"
+description: "Comprehensive test of the SPL Language Server Protocol implementation"
+tags:
+  - test
+  - lsp
+  - demo
+
+configurations:
+  splunk:
+    query: |
+      // Test 1: Command Autocomplete
+      // Type "| st" and press Ctrl+Space to see stats, streamstats, etc.
+      index=main sourcetype=access_combined
+      | stats count by status, clientip
+      
+      // Test 2: Hover Information
+      // Hover over "stats" above to see full documentation
+       Hover over "eval" below to see command details
+      | eval bandwidth=bytes/duration
+      
+      // Test 3: Function Autocomplete
+      // Type "| eval test = le" and press Ctrl+Space to see len(), lower(), etc.
+      | eval message_length=len(message)
+      | eval username_lower=lower(username)
+      
+      // Test 4: Function Signature Help
+      // Type "| eval result = if(" and see parameter hints
+      | eval status_label=if(status==200, "success", "failure")
+      | eval rounded_value=round(response_time, 2)
+      
+      ```Test 5: Multiple Functions```
+      // Hover over these functions to see their documentation
+      | eval hash=md5(123)
+      | eval current_time=now()
+      | eval formatted_time=strftime(_time, "%Y-%m-%d %H:%M:%S")
+      
+      // Test 6: Text Functions
+      | eval trimmed=trim(field)
+      | eval uppercase=upper(message)
+      | eval substring=substr(text, 0, 10)
+      
+      // Test 7: Multivalue Functions
+      | eval combined=mvappend(field1, field2, field3)
+      | eval count_values=mvcount(emails)
+      | eval joined=mvjoin(tags, ",")
+      
+      # Test 8: Statistical Functions
+      | eval average=strp
+      | eval maximum=max(field1, field2)
+      | eval minimum=min(score1, score2, score3)
+      
+      # Test 9: More Commands with Autocomplete
+      | dedup clientip
+      | fields clientip, status, bytes
+      | sort -bytes
+      | head 100
+      | table clientip, status, bytes
+      
+      # Test 10: Complex Pipeline
+      | eventstats avg(bytes) as avg_bytes by status
+      | where bytes > avg_bytes
+      | fillnull value=0 missing_field
+      | rename clientip as "Client IP", status as "HTTP Status"
+
+  # Test 11: Error Detection
+  # Uncomment the lines below to see error diagnostics
+  splunk_enterprise_security:
+    query: |
+      index=main
+      # | unknowncommand field  # This will show an error
+      | stats count by host
+      # | typo_command  # This will also show an error
+      | eval test=len(message)
+      
+      # Test proper commands
+      | timechart span=1h count
+      | where count > 100
+
+---
+# End of LSP test file

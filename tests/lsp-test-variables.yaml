@@ -1,0 +1,114 @@
+---
+# Variable Tracking Test for SyntaxTide SPL Language Server
+# This file demonstrates the new variable autocomplete feature
+
+name: "Test Detection Rule - Variable Tracking"
+description: "Test user-defined variable tracking and autocomplete"
+tags:
+  - test
+  - lsp
+  - variables
+
+configurations:
+  splunk:
+    query: |
+      # ========================================
+      # VARIABLE TRACKING TEST
+      # ========================================
+      # This test demonstrates how the LSP tracks variables you create
+      # and makes them available in autocomplete (Ctrl+Space)
+      
+      # Step 1: Create variables with eval
+      index=main sourcetype=access_combined
+      | eval response_time_ms=response_time*1000
+      | eval is_error=if(status>=400, 1, 0)
+      | eval bandwidth_mb=bytes/1048576
+      
+      # Step 2: Now try typing any of these and press Ctrl+Space:
+      #   - response_time_ms
+      #   - is_error
+      #   - bandwidth_mb
+      # They should appear in autocomplete as "User-defined field"
+      
+      # Test it here - type "| eval test = resp" and press Ctrl+Space
+      | eval test_calculation=response_time_ms/1000
+      
+      # Step 3: Create more variables with rename
+      | rename clientip AS client_address
+      | rename status AS http_status_code
+      
+      # Now try autocomplete for:
+      #   - client_address
+      #   - http_status_code
+      
+      # Test it here - type "| where client" and press Ctrl+Space
+      | where client_address!="127.0.0.1"
+      | where 
+      
+      # Step 4: Create variables with rex field extraction
+      | rex field=uri "^/(?<api_endpoint>[^/]+)/"
+      | rex field=user_agent "(?<browser>Chrome|Firefox|Safari)"
+      
+      # Now try autocomplete for:
+      #   - api_endpoint
+      #   - browser
+      
+      # Test it here - type "| stats count by api" and press Ctrl+Space
+      | stats count by api_endpoint
+      
+      # Step 5: Create variables with stats aggregations
+      | stats count AS total_requests,
+              avg(response_time_ms) AS avg_response_time,
+              sum(bandwidth_mb) AS total_bandwidth
+              by http_status_code
+      
+      # Now try autocomplete for:
+      #   - total_requests
+      #   - avg_response_time
+      #   - total_bandwidth
+      
+      # Test it here - type "| where total" and press Ctrl+Space
+      | where total_requests > 100
+      
+      # Step 6: Create variables with spath (JSON extraction)
+      | spath input=json_data output=user_id path=user.id
+      | spath input=json_data output=session_token path=session.token
+      
+      # Now try autocomplete for:
+      #   - user_id
+      #   - session_token
+      
+      # Test it here - type "| eval combined = user" and press Ctrl+Space
+      | eval user_session=user_id + ":" + session_token
+      
+      # Step 7: Hover over any variable to see info
+      # Hover over "response_time_ms" or any other variable to see that
+      # it's marked as "User-defined field" with creation methods listed
+      
+      # Step 8: Test in complex scenarios
+      | streamstats count AS running_count,
+                      avg(total_bandwidth) AS running_avg_bandwidth
+                      by api_endpoint
+      
+      # All these variables should be available:
+      #   - running_count
+      #   - running_avg_bandwidth
+      
+      # Final test - type "| fields " and press Ctrl+Space
+      # You should see ALL your variables along with commands and functions
+      | fields api_endpoint, total_requests, avg_response_time, running_count
+      
+      # ========================================
+      # VERIFICATION CHECKLIST:
+      # ========================================
+      # ✓ Variables from eval appear in autocomplete
+      # ✓ Variables from rename appear in autocomplete
+      # ✓ Variables from rex appear in autocomplete
+      # ✓ Variables from stats appear in autocomplete
+      # ✓ Variables from spath appear in autocomplete
+      # ✓ Variables from streamstats/eventstats appear in autocomplete
+      # ✓ Hovering over variables shows "User-defined field" info
+      # ✓ Variables are sorted to top of autocomplete list
+      # ✓ Variables work in all contexts (eval, where, stats BY, fields, etc.)
+
+---

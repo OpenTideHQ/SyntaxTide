@@ -1,8 +1,8 @@
 {
   "name": "syntaxtide",
   "displayName": "OpenTide Query Syntax Highlighting",
-  "description": "Adds query language syntax highlighting to OpenTide YAML rule files",
-  "version": "0.1.0",
+  "description": "Adds query language syntax highlighting and language intelligence to OpenTide YAML rule files",
+  "version": "0.2.0",
   "publisher": "opentide",
   "icon": "syntaxtide-icon.png",
   "galleryBanner": {
@@ -14,13 +14,20 @@
     "url": "https://github.com/OpenTideHQ/SyntaxTide.git"
   },
   "license": "EUPL 1.2",
+  "main": "./out/extension.js",
   "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
     "package": "vsce package",
     "publish": "vsce publish"
   },
   "engines": {
     "vscode": "^1.75.0"
   },
+  "activationEvents": [
+    "onLanguage:yaml"
+  ],
   "categories": [
     "Programming Languages"
   ],
@@ -108,5 +115,17 @@
         }
       }
     ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.3.3",
+    "@vscode/vsce": "^2.22.0"
   }
 }

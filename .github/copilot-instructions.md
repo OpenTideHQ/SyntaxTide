@@ -2,12 +2,15 @@
 
 ## Project Overview
 
-SyntaxTide is a **pure TextMate grammar-based VS Code extension** that provides syntax highlighting for multiple query languages (KQL, SPL, CBC) embedded in OpenTide YAML detection rule files. No TypeScript code, no LSP - just grammar injection for context-aware highlighting.
+SyntaxTide is a **VS Code extension** that provides:
+1. **TextMate grammar-based syntax highlighting** for multiple query languages (KQL, SPL, CBC) embedded in OpenTide YAML detection rule files
+2. **Language Server Protocol (LSP) implementation** for SPL queries with autocomplete, hover info, validation, and signature help
 
 ## Procedures
 
 - When adding a significant new feature or query language, update this document with relevant instructions and architecture details.
 - Also document in CHANGELOG.md and syntaxes/README.md as appropriate.
+- When modifying LSP features, update src/README.md and tests/TESTING_GUIDE.md.
 
 ## Architecture: Grammar Injection Pattern
 
@@ -164,10 +167,133 @@ npm run publish    # Publishes to marketplace (requires login)
 
 **Files excluded from .vsix**: See `.vscodeignore` - dev docs, tests, query reference materials
 
+## Language Server Protocol (LSP) Implementation
+
+### Architecture
+
+```
+Extension (src/extension.ts)
+    ↓ Starts LSP client
+Language Client (vscode-languageclient)
+    ↓ IPC Communication
+Language Server (src/server.ts)
+    ├─ YAML Parser (yaml package)
+    ├─ SPL Validator
+    ├─ Hover Provider
+    ├─ Completion Provider
+    └─ Signature Help Provider
+    ↓ Uses
+SPL Databases
+    ├─ src/spl-commands-database.ts (64 commands)
+    └─ src/spl-functions-database.ts (95+ functions)
+```
+
+### Database Structure
+
+**SPL Commands Database** (`src/spl-commands-database.ts`):
+- **64 commands** with full metadata (41 fully documented)
+- Each command has: name, type, category, description, syntax, requiredArgs, optionalArgs, examples[], relatedCommands[]
+- Helper function: `getSPLCommand(name: string)` for lookups
+- Types: Generating, Transforming, Streaming
+
+**SPL Functions Database** (`src/spl-functions-database.ts`):
+- **95+ functions** across 13 categories
+- Categories: Comparison & Conditional (13), Mathematical (12), Statistical (4), Text (10), Multivalue (12), Cryptographic (4), Date & Time (5), Conversion (6), Informational (9), etc.
+- Each function has: name, category, description, signature, returnType, examples[], relatedFunctions[]
+
+### LSP Features Implemented
+
+1. **Autocomplete**: Context-aware suggestions (after `|`, in `eval`, in `where`)
+2. **Hover Information**: Rich documentation for commands and functions
+3. **Signature Help**: Parameter hints for functions
+4. **Error Detection**: Real-time validation of SPL queries
+5. **Completion Resolution**: Detailed documentation on selection
+
+### Development Workflow for LSP
+
+1. **Edit** database files or server.ts
+2. **Compile**: `npm run compile` (or `npm run watch` for auto-compile)
+3. **Reload**: `Ctrl+Shift+P` → "Developer: Reload Window"
+4. **Test**: Open `tests/lsp-test.yaml` or `tests/query-highlighting.yaml`
+5. **Verify**: Check autocomplete, hover, errors, signature help
+
+### Adding SPL Commands
+
+Edit `src/spl-commands-database.ts`:
+```typescript
+{
+    name: 'commandname',
+    type: 'Streaming',  // or 'Transforming', 'Generating'
+    category: 'Data Processing',
+    description: 'Full description from Splunk docs',
+    syntax: 'commandname <arg1> [<optional-arg>]',
+    requiredArgs: 1,
+    optionalArgs: 1,
+    examples: [
+        '... | commandname field',
+        '... | commandname field BY groupfield'
+    ],
+    relatedCommands: ['similar1', 'similar2']
+}
+```
+
+### Adding SPL Functions
+
+Edit `src/spl-functions-database.ts`:
+```typescript
+{
+    name: 'funcname',
+    category: 'Text',  // or appropriate category
+    description: 'What the function does',
+    signature: 'funcname(<param1>, <param2>)',
+    returnType: 'string',  // or 'number', 'boolean', 'any'
+    examples: ['funcname(field, "value")'],
+    relatedFunctions: ['similar1', 'similar2']
+}
+```
+
+### Testing LSP Changes
+
+Use `tests/lsp-test.yaml` which has 11 comprehensive test scenarios:
+1. Command autocomplete
+2. Hover information
+3. Function autocomplete
+4. Function signature help
+5. Multiple functions
+6. Text functions
+7. Multivalue functions
+8. Statistical functions
+9. Command pipelines
+10. Complex pipelines
+11. Error detection
+
+See `tests/TESTING_GUIDE.md` for complete testing instructions.
+
+### LSP Debugging
+
+1. **Output Panel**: `View` → `Output` → "SyntaxTide Language Server"
+2. **Console**: `Help` → `Toggle Developer Tools` → Console
+3. **Add Logging**: Use `connection.console.log('message')` in server.ts
+4. **Problems Panel**: `Ctrl+Shift+M` to see all diagnostics
+
+### LSP Documentation
+
+- **Developer Guide**: `src/README.md` - Architecture, features, development workflow
+- **Testing Guide**: `tests/TESTING_GUIDE.md` - Comprehensive testing instructions
+- **Database Source**: `query-languages/splunk/` - Official SPL documentation and analysis
+
 ## Common Pitfalls
 
+### Grammar-Related
 1. **Forgetting embeddedLanguages**: Injection won't work without the `embeddedLanguages` mapping in package.json
 2. **Incorrect indentation regex**: `end` patterns must use `^(?!\\1\\s+|\\s*$)` to properly detect dedent
 3. **Missing junction**: Extension won't load if `.vscode/extensions/syntaxtide` doesn't exist or isn't pointing to root
 4. **Not reloading**: Grammar changes require window reload, not just file save
 5. **Scope name typos**: `meta.embedded.block.{lang}` must match exactly between injection grammar and package.json
+
+### LSP-Related
+1. **Forgetting to compile**: LSP changes require `npm run compile` before testing
+2. **Not reloading after compile**: Must reload VS Code window after compilation
+3. **Type safety errors**: Use optional chaining `(cmd.examples || [])` and explicit types `(ex: string)`
+4. **Missing exports**: Helper functions must be exported (e.g., `getSPLCommand`)
+5. **Context detection**: LSP only works in `configurations.splunk.query: |` blocks, not inline strings
