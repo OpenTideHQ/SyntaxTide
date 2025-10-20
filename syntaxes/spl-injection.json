@@ -1,0 +1,63 @@
+{
+  "scopeName": "text.opentide.yaml.spl.injection",
+  "injectionSelector": "L:source.yaml",
+  "patterns": [
+    {
+      "include": "#splunk-configuration-block"
+    }
+  ],
+  "repository": {
+    "splunk-configuration-block": {
+      "name": "meta.opentide.splunk.configuration.yaml",
+      "begin": "^(\\s*)(splunk)(\\s*)(:)\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.yaml"
+        }
+      },
+      "end": "^(?!\\1\\s+|\\s*$|\\s*#)",
+      "patterns": [
+        {
+          "include": "#splunk-query-block"
+        },
+        {
+          "include": "source.yaml"
+        }
+      ]
+    },
+    "splunk-query-block": {
+      "name": "meta.opentide.splunk.query.yaml",
+      "begin": "^(\\s*)(query)(\\s*)(:)(\\s*)(\\|)\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.yaml"
+        },
+        "6": {
+          "name": "keyword.operator.block.yaml"
+        }
+      },
+      "end": "^(?!\\1\\s+|\\s*$)",
+      "patterns": [
+        {
+          "include": "#spl-content"
+        }
+      ]
+    },
+    "spl-content": {
+      "name": "meta.embedded.block.spl",
+      "begin": "^(\\s+)",
+      "end": "^(?!\\1)",
+      "patterns": [
+        {
+          "include": "source.spl"
+        }
+      ]
+    }
+  }
+}

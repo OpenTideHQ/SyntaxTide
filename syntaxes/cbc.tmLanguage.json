@@ -1,0 +1,293 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Carbon Black Cloud Query",
+  "scopeName": "source.cbc",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#field-query"
+    },
+    {
+      "include": "#boolean-operators"
+    },
+    {
+      "include": "#grouping"
+    },
+    {
+      "include": "#range-query"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#special-values"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#wildcards"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.hash.cbc",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "field-query": {
+      "patterns": [
+        {
+          "name": "meta.field-query.cbc",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(:)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "name": "variable.other.field.process.cbc",
+                  "match": "\\b(process_name|process_cmdline|process_md5|process_sha256|process_original_filename|process_effective_reputation|process_id|process_guid|parent_name|parent_md5|parent_sha256|parent_id|childproc_name|childproc_md5|childproc_sha256|childproc_count)\\b"
+                },
+                {
+                  "name": "variable.other.field.network.cbc",
+                  "match": "\\b(netconn_count|ipaddr|ipport|domain|ipv6addr|ja3|ja3s|remote_ip|remote_port|local_ip|local_port|protocol)\\b"
+                },
+                {
+                  "name": "variable.other.field.file.cbc",
+                  "match": "\\b(filemod|filemod_count|filewrite_md5|filewrite_sha256|modload|modload_count|regmod|regmod_name|regmod_count|path|observed_filename)\\b"
+                },
+                {
+                  "name": "variable.other.field.host.cbc",
+                  "match": "\\b(hostname|host_type|host_count|group|sensor_id|os_type|device_os)\\b"
+                },
+                {
+                  "name": "variable.other.field.signature.cbc",
+                  "match": "\\b(digsig_result|digsig_publisher|digsig_issuer|digsig_subject|digsig_sign_time|digsig_prog_name|signed)\\b"
+                },
+                {
+                  "name": "variable.other.field.crossproc.cbc",
+                  "match": "\\b(crossproc_type|crossproc_count|crossproc_name|crossproc_md5|crossproc_sha256)\\b"
+                },
+                {
+                  "name": "variable.other.field.metadata.cbc",
+                  "match": "\\b(company_name|product_name|file_version|file_desc|internal_name|original_filename|legal_copyright|legal_trademark|comments|private_build|cmdline|alliance_score_.*|cb_score|watchlist_.*|threat_score|report_score|sensor_action|blocked_status|blocked_md5|enriched|emet_count|has_emet_config|has_emet_event|tamper|tamper_flag)\\b"
+                },
+                {
+                  "name": "variable.other.field.time.cbc",
+                  "match": "\\b(start|last_update|last_server_update|timestamp|server_added_timestamp)\\b"
+                },
+                {
+                  "name": "variable.other.field.binary.cbc",
+                  "match": "\\b(md5|sha256|is_64bit|is_executable_image|orig_mod_len|copied_mod_len|server_added_timestamp)\\b"
+                },
+                {
+                  "name": "variable.other.field.generic.cbc",
+                  "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+                }
+              ]
+            },
+            "2": {
+              "name": "keyword.operator.assignment.cbc"
+            }
+          }
+        }
+      ]
+    },
+    "boolean-operators": {
+      "patterns": [
+        {
+          "name": "keyword.control.cbc",
+          "match": "\\b(AND|and)\\b"
+        },
+        {
+          "name": "keyword.control.cbc",
+          "match": "\\b(OR|or)\\b"
+        },
+        {
+          "name": "keyword.control.cbc",
+          "match": "\\b(NOT|not)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.cbc",
+          "match": "(?:^|\\s)(-|!)(?=\\S)"
+        }
+      ]
+    },
+    "grouping": {
+      "patterns": [
+        {
+          "name": "meta.group.cbc",
+          "begin": "\\(",
+          "end": "\\)",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.group.begin.cbc"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.group.end.cbc"
+            }
+          },
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "range-query": {
+      "patterns": [
+        {
+          "name": "meta.range.cbc",
+          "begin": "\\[",
+          "end": "\\]",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.range.begin.cbc"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.range.end.cbc"
+            }
+          },
+          "patterns": [
+            {
+              "name": "keyword.operator.range.cbc",
+              "match": "\\bTO\\b"
+            },
+            {
+              "name": "constant.numeric.wildcard.cbc",
+              "match": "\\*"
+            },
+            {
+              "name": "constant.numeric.integer.cbc",
+              "match": "\\b\\d+\\b"
+            },
+            {
+              "name": "constant.other.datetime.cbc",
+              "match": "\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}:\\d{2})?"
+            },
+            {
+              "name": "constant.other.relative-time.cbc",
+              "match": "-\\d+[hms]"
+            }
+          ]
+        },
+        {
+          "name": "meta.range.braces.cbc",
+          "begin": "\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.range.begin.cbc"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.range.end.cbc"
+            }
+          },
+          "patterns": [
+            {
+              "name": "keyword.operator.range.cbc",
+              "match": "\\bTO\\b"
+            },
+            {
+              "include": "#numbers"
+            }
+          ]
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.cbc",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.cbc",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "special-values": {
+      "patterns": [
+        {
+          "name": "constant.language.reputation.cbc",
+          "match": "\\b(NOT_LISTED|TRUSTED_WHITE_LIST|COMPANY_BLACK_LIST|ADAPTIVE_WHITE_LIST|PUP|RESOLVING|KNOWN_MALWARE|ADMIN_BLACK_LIST)\\b"
+        },
+        {
+          "name": "constant.language.os.cbc",
+          "match": "\\b(WINDOWS|MAC|LINUX|OSX)\\b"
+        },
+        {
+          "name": "constant.language.host-type.cbc",
+          "match": "\\b(workstation|server|domain_controller|domain\\ controller)\\b"
+        },
+        {
+          "name": "constant.language.digsig-result.cbc",
+          "match": "\\b(Signed|Unsigned|Bad\\ Signature|Invalid\\ Signature|Invalid\\ Chain|Untrusted\\ Root|Explicit\\ Distrust|Expired)\\b"
+        },
+        {
+          "name": "constant.language.crossproc-type.cbc",
+          "match": "\\b(processopen|remotethread|processopentarget|remotethreadtarget|process_open|remote_thread)\\b"
+        },
+        {
+          "name": "constant.language.boolean.cbc",
+          "match": "\\b(true|false|TRUE|FALSE)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.cbc",
+          "match": "\\b0[xX][0-9a-fA-F]+\\b"
+        },
+        {
+          "name": "constant.numeric.md5.cbc",
+          "match": "\\b[0-9a-fA-F]{32}\\b"
+        },
+        {
+          "name": "constant.numeric.sha256.cbc",
+          "match": "\\b[0-9a-fA-F]{64}\\b"
+        },
+        {
+          "name": "constant.numeric.integer.cbc",
+          "match": "\\b\\d+\\b"
+        },
+        {
+          "name": "constant.other.ip-address.cbc",
+          "match": "\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\\b"
+        },
+        {
+          "name": "constant.other.ipv6-address.cbc",
+          "match": "\\b(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}(?:/[0-9]{1,3})?\\b"
+        }
+      ]
+    },
+    "wildcards": {
+      "patterns": [
+        {
+          "name": "constant.character.wildcard.multi.cbc",
+          "match": "\\*"
+        },
+        {
+          "name": "constant.character.wildcard.single.cbc",
+          "match": "\\?"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,226 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Splunk SPL",
+  "scopeName": "source.spl",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#booleans"
+    },
+    {
+      "include": "#commands"
+    },
+    {
+      "include": "#eval-functions"
+    },
+    {
+      "include": "#stats-functions"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#fields"
+    },
+    {
+      "include": "#macros"
+    },
+    {
+      "include": "#subsearches"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.backtick.spl",
+          "match": "```[^`]*```"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.spl",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.spl",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.spl",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.spl",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.spl",
+          "match": "\\b0[xX][0-9a-fA-F]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.spl",
+          "match": "\\b[0-9]+\\.[0-9]+([eE][+-]?[0-9]+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.spl",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.spl",
+          "match": "\\b(true|false|t|f|TRUE|FALSE|T|F)\\b"
+        },
+        {
+          "name": "constant.language.null.spl",
+          "match": "\\b(null|NULL)\\b"
+        }
+      ]
+    },
+    "commands": {
+      "patterns": [
+        {
+          "name": "keyword.control.pipe.spl",
+          "match": "\\|"
+        },
+        {
+          "name": "keyword.control.search.spl",
+          "match": "\\b(search|where|eval|stats|chart|timechart|table|fields|rename|rex|replace|regex|erex|transaction|multisearch|append|appendcols|join|lookup|inputlookup|outputlookup|return|map|spath|xpath|xmlkv|kvform|extract|multikv|typer|eventstats|streamstats|bin|bucket|dedup|head|tail|sort|reverse|uniq|rare|top|untable|xyseries|transpose|makemv|mvexpand|nomv|fillnull|filldown|autoregress|delta|accum|autoregress|trendline|cluster|kmeans|outlier|anomalies|predict|x11|correlate)\\b"
+        },
+        {
+          "name": "keyword.control.transforming.spl",
+          "match": "\\b(addcoltotals|addtotals|addinfo|abstract|analyzefields|anomalousvalue|associate|audit|collect|contingency|convert|crawl|datamodel|dbinspect|delete|diff|erex|eventcount|fieldsummary|findtypes|folderize|format|from|gauge|gentimes|geom|geomfilter|geostats|highlight|history|iconify|input|inputcsv|iplocation|loadjob|localize|localop|makeresults|mcollect|metadata|metasearch|mstats|multisearch|mvcombine|pivot|pivot|rangemap|redistribute|reltime|rest|savedsearch|script|scrub|searchtxn|sendemail|set|setfields|sichart|sirare|sistats|sitimechart|sitop|stats|strcat|streamstats|table|tags|timechart|transaction|transpose|tscollect|tstats|typeahead|typelearner|typer|union|uniq|untable|where|x11|xmlkv|xmlunescape|xpath|xyseries)\\b"
+        },
+        {
+          "name": "keyword.control.generating.spl",
+          "match": "\\b(datamodel|dbinspect|eventcount|from|inputcsv|inputlookup|iplocation|loadjob|makeresults|metadata|mstats|rest|savedsearch|search|tstats)\\b"
+        },
+        {
+          "name": "keyword.other.as.spl",
+          "match": "\\b(as|AS|by|BY|over|OVER)\\b"
+        },
+        {
+          "name": "keyword.other.span.spl",
+          "match": "\\b(span|SPAN)\\b"
+        }
+      ]
+    },
+    "eval-functions": {
+      "patterns": [
+        {
+          "name": "support.function.string.spl",
+          "match": "\\b(substr|upper|lower|trim|ltrim|rtrim|replace|split|len|urldecode|printf|tostring|tonumber|mvindex|mvcount|mvfilter|mvfind|mvjoin|mvrange|mvsort|mvdedup|mvappend|mvzip|commands|like|searchmatch|cidrmatch|match|case|if|validate|coalesce|null|nullif|isnull|isnotnull|isnum|isstr|typeof)\\b"
+        },
+        {
+          "name": "support.function.math.spl",
+          "match": "\\b(abs|ceil|floor|round|sqrt|pow|exp|ln|log|exp2|log2|exp10|log10|pi|random|sigfig|exact|ceiling)\\b"
+        },
+        {
+          "name": "support.function.date.spl",
+          "match": "\\b(now|time|relative_time|strftime|strptime|date_hour|date_mday|date_minute|date_month|date_second|date_wday|date_year|date_zone)\\b"
+        },
+        {
+          "name": "support.function.conversion.spl",
+          "match": "\\b(tostring|tonumber|tohex|tobase64|toobject|json_object|json_array|json_extract|json_extract_exact|json_set|spath|tojson)\\b"
+        },
+        {
+          "name": "support.function.crypto.spl",
+          "match": "\\b(md5|sha1|sha256|sha512)\\b"
+        },
+        {
+          "name": "support.function.informational.spl",
+          "match": "\\b(isint|isnum|isstr|isbool|isnull|isnotnull|typeof|spath|searchmatch|commands)\\b"
+        }
+      ]
+    },
+    "stats-functions": {
+      "patterns": [
+        {
+          "name": "support.function.aggregate.spl",
+          "match": "\\b(avg|c|count|dc|distinct_count|earliest|earliest_time|estdc|estdc_error|exactperc|first|last|latest|latest_time|list|max|mean|median|min|mode|per_day|per_hour|per_minute|per_second|perc|perc[0-9]+|range|rate|rate_avg|rate_sum|stdev|stdevp|sum|sumsq|upper|values|var|varp)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.comparison.spl",
+          "match": "(==|!=|<|>|<=|>=)"
+        },
+        {
+          "name": "keyword.control.spl",
+          "match": "\\b(AND|OR|NOT|XOR|and|or|not|xor)\\b"
+        },
+        {
+          "name": "keyword.operator.arithmetic.spl",
+          "match": "(\\+|-|\\*|/|%)"
+        },
+        {
+          "name": "keyword.operator.assignment.spl",
+          "match": "="
+        }
+      ]
+    },
+    "fields": {
+      "patterns": [
+        {
+          "name": "variable.other.field.spl",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_\\.]*\\b(?=\\s*=)"
+        },
+        {
+          "name": "variable.parameter.field.spl",
+          "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*\\$"
+        },
+        {
+          "name": "entity.name.tag.index.spl",
+          "match": "\\b(index|sourcetype|source|host|_time|_raw|_indextime|splunk_server)\\s*="
+        }
+      ]
+    },
+    "macros": {
+      "patterns": [
+        {
+          "name": "entity.name.function.macro.spl",
+          "match": "`[a-zA-Z_][a-zA-Z0-9_]*(?:\\([^)]*\\))?`"
+        }
+      ]
+    },
+    "subsearches": {
+      "patterns": [
+        {
+          "name": "meta.embedded.subsearch.spl",
+          "begin": "\\[",
+          "end": "\\]",
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+# Git & VS Code
+.git
+.gitignore
+.vscode/**
+.vscode-test/**
+
+# Development files
+setup-dev.sh
+setup-dev.bat
+*.vsix
+
+# Development documentation
+DEVELOPMENT.md
+IMPLEMENTATION.md
+
+# Tests
+tests/**
+
+# Query Languages definitions
+query-languages/**
+

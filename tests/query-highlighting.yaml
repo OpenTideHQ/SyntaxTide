@@ -1,0 +1,168 @@
+# Test file for OpenTide Query Syntax Highlighting Extension
+# Open this file to verify the extension is working correctly
+# 
+# This file tests system-specific query highlighting:
+# - Sentinel queries should have KQL syntax highlighting
+# - Splunk queries should NOT have highlighting (not implemented yet)
+# - Carbon Black queries should NOT have highlighting (not implemented yet)
+
+name: Test Multi-System Query Syntax Highlighting
+metadata:
+  uuid: 12345678-1234-1234-1234-123456789abc
+  schema: mdr::2.0
+  tlp: clear
+  version: 1
+  created: 2025-01-01
+  modified: 2025-01-01
+  author: test@test.com
+
+description: |
+  Test file to verify query syntax highlighting works correctly for each system.
+  Only Sentinel (KQL) highlighting is currently implemented.
+
+detection_model: test-123
+
+response:
+  alert_severity: Informational
+  playbook: https://test.com
+  responders: TEST
+  procedure:
+    analysis: Test analysis
+
+configurations:
+  
+  # ===================================================================
+  # SENTINEL - Should have KQL syntax highlighting
+  # ===================================================================
+  sentinel:
+    schema: sentinel::2.3
+    status: DEVELOPMENT
+    
+    trigger:
+      operator: GreaterThan
+      threshold: 0
+    
+    scheduling:
+      frequency: 5m
+      lookback: 10m
+    
+    alert:
+      create_incident: true
+      suppression: false
+      title: Test Sentinel Alert
+      description: Test KQL highlighting
+    
+    grouping:
+      event: SingleAlert
+      alert:
+        enabled: false
+        reopen_closed_incidents: false
+        grouping_lookback: 5h
+        matching: AllEntities
+    
+    entities:
+      - entity: Account
+        mappings:
+          - identifier: Name
+            column: AccountName
+    
+    # THIS BLOCK SHOULD HAVE KQL SYNTAX HIGHLIGHTING:
+    query: |
+      SecurityEvent
+      | where TimeGenerated > ago(1h)
+      | where EventID in (4624, 4625, 4634)
+      | extend AccountType = case(
+          AccountType == "User", "Standard User",
+          AccountType == "Machine", "Computer Account",
+          "Other"
+        )
+      | project TimeGenerated, Account, Computer, EventID, AccountType
+      | summarize 
+          LoginAttempts = count(),
+          FailedLogins = countif(EventID == 4625),
+          SuccessfulLogins = countif(EventID == 4624),
+          UniqueComputers = dcount(Computer)
+          by Account
+      | where FailedLogins > 5
+      | order by FailedLogins desc
+      | take 100
+      | join kind=leftouter (
+          SecurityEvent
+          | where EventID == 4740
+          | project LockedAccount = Account, LockoutTime = TimeGenerated
+        ) on $left.Account == $right.LockedAccount
+      | extend IsLocked = isnotnull(LockedAccount)
+      | project-away LockedAccount
+
+  # ===================================================================
+  # SPLUNK - Should NOW have SPL syntax highlighting
+  # ===================================================================
+  splunk:
+    schema: splunk::2.0
+    status: DEVELOPMENT
+    
+    throttling:
+      fields:
+        - user
+      duration: 1h
+    
+    scheduling:
+      frequency: 15m
+      lookback: 1h
+    
+    notable:
+      event:
+        title: Test Splunk Alert - $user$
+        description: Test SPL highlighting with complex query
+    
+    # THIS BLOCK SHOULD NOW HAVE SPL SYNTAX HIGHLIGHTING:
+    query: |
+      index=main sourcetype=WinEventLog:Security EventCode=4625
+      | eval user=lower(user), hour=strftime(_time, "%H")
+      | stats count as failed_attempts
+          dc(ComputerName) as unique_hosts
+          earliest(_time) as first_seen
+          latest(_time) as last_seen
+          by user, src_ip
+      | where failed_attempts > 5
+      | eval duration=tostring(last_seen-first_seen, "duration")
+      | lookup asset_lookup host as src_ip OUTPUT asset_category, owner
+      | eval risk_score=case(
+          failed_attempts > 100, "critical",
+          failed_attempts > 50, "high",
+          failed_attempts > 10, "medium",
+          1=1, "low"
+        )
+      | search NOT [ | inputlookup whitelist.csv | fields user ]
+      | rex field=user "(?<domain>[^\\\\]+)\\\\(?<username>.+)"
+      | table _time, user, domain, username, src_ip, failed_attempts, unique_hosts, duration, asset_category, risk_score
+      | sort - failed_attempts
+      | head 100
+
+  # ===================================================================
+  # CARBON BLACK CLOUD - Should NOW have CBC syntax highlighting
+  # ===================================================================
+  carbon_black_cloud:
+    schema: carbon_black_cloud::2.0
+    status: DEVELOPMENT
+    
+    tags:
+      - test
+      - powershell
+      - obfuscation
+    
+    # THIS BLOCK SHOULD NOW HAVE CBC SYNTAX HIGHLIGHTING:
+    query: |
+      (process_name:powershell.exe OR process_name:pwsh.exe)
+      AND (process_cmdline:-encodedcommand OR process_cmdline:-enc OR process_cmdline:-e)
+      AND process_effective_reputation:NOT_LISTED
+      AND netconn_count:[1 TO *]
+      AND NOT (parent_name:explorer.exe OR parent_name:svchost.exe)
+      AND device_os:WINDOWS
+      AND -(regmod_name:*AppData* OR filemod:*temp*)
+      AND crossproc_type:remotethread
+      AND (ipaddr:10.0.0.0/8 OR ipaddr:192.168.0.0/16)
+      AND start:[-24h TO *]
+      AND digsig_result:Unsigned
+      AND !enriched:true
+      AND childproc_count:[0 TO 5]

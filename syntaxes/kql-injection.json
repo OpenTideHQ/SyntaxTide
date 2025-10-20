@@ -1,0 +1,87 @@
+{
+  "scopeName": "text.opentide.yaml.kql.injection",
+  "injectionSelector": "L:source.yaml",
+  "patterns": [
+    {
+      "include": "#sentinel-configuration-block"
+    },
+    {
+      "include": "#defender-for-endpoint-configuration-block"
+    }
+  ],
+  "repository": {
+    "sentinel-configuration-block": {
+      "name": "meta.opentide.sentinel.configuration.yaml",
+      "begin": "^(\\s*)(sentinel)(\\s*)(:)\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.yaml"
+        }
+      },
+      "end": "^(?!\\1\\s+|\\s*$|\\s*#)",
+      "patterns": [
+        {
+          "include": "#kql-query-block"
+        },
+        {
+          "include": "source.yaml"
+        }
+      ]
+    },
+    "defender-for-endpoint-configuration-block": {
+      "name": "meta.opentide.defender-for-endpoint.configuration.yaml",
+      "begin": "^(\\s*)(defender_for_endpoint)(\\s*)(:)\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.yaml"
+        }
+      },
+      "end": "^(?!\\1\\s+|\\s*$|\\s*#)",
+      "patterns": [
+        {
+          "include": "#kql-query-block"
+        },
+        {
+          "include": "source.yaml"
+        }
+      ]
+    },
+    "kql-query-block": {
+      "name": "meta.opentide.kql.query.yaml",
+      "begin": "^(\\s*)(query)(\\s*)(:)(\\s*)(\\|)\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.yaml"
+        },
+        "6": {
+          "name": "keyword.operator.block.yaml"
+        }
+      },
+      "end": "^(?!\\1\\s+|\\s*$)",
+      "patterns": [
+        {
+          "include": "#kql-content"
+        }
+      ]
+    },
+    "kql-content": {
+      "name": "meta.embedded.block.kql",
+      "begin": "^(\\s+)",
+      "end": "^(?!\\1)",
+      "patterns": [
+        {
+          "include": "source.kql"
+        }
+      ]
+    }
+  }
+}

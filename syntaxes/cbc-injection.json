@@ -1,0 +1,63 @@
+{
+  "scopeName": "text.opentide.yaml.cbc.injection",
+  "injectionSelector": "L:source.yaml",
+  "patterns": [
+    {
+      "include": "#carbon-black-cloud-configuration-block"
+    }
+  ],
+  "repository": {
+    "carbon-black-cloud-configuration-block": {
+      "name": "meta.opentide.carbon_black_cloud.configuration.yaml",
+      "begin": "^(\\s*)(carbon_black_cloud)(\\s*)(:)\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.yaml"
+        }
+      },
+      "end": "^(?!\\1\\s+|\\s*$|\\s*#)",
+      "patterns": [
+        {
+          "include": "#carbon-black-cloud-query-block"
+        },
+        {
+          "include": "source.yaml"
+        }
+      ]
+    },
+    "carbon-black-cloud-query-block": {
+      "name": "meta.opentide.carbon_black_cloud.query.yaml",
+      "begin": "^(\\s*)(query)(\\s*)(:)(\\s*)(\\|)\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.yaml"
+        },
+        "6": {
+          "name": "keyword.operator.block.yaml"
+        }
+      },
+      "end": "^(?!\\1\\s+|\\s*$)",
+      "patterns": [
+        {
+          "include": "#cbc-content"
+        }
+      ]
+    },
+    "cbc-content": {
+      "name": "meta.embedded.block.cbc",
+      "begin": "^(\\s+)",
+      "end": "^(?!\\1)",
+      "patterns": [
+        {
+          "include": "source.cbc"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "name": "opentide-query-syntax",
+  "displayName": "OpenTide Query Syntax Highlighting",
+  "description": "Adds query language syntax highlighting (KQL, SPL, and more) to OpenTide YAML files",
+  "version": "0.1.0",
+  "publisher": "opentide",
+  "icon": "syntaxtide-icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OpenTideHQ/SyntaxTide.git"
+  },
+  "license": "EUPL 1.2",
+  "scripts": {
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "OpenTide",
+    "KQL",
+    "Kusto",
+    "Sentinel",
+    "SPL",
+    "Splunk",
+    "Carbon Black",
+    "CBC",
+    "SIEM",
+    "Detection",
+    "Security"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "kql",
+        "aliases": ["Kusto Query Language", "KQL", "kql"],
+        "extensions": [".kql", ".kusto"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "spl",
+        "aliases": ["Splunk SPL", "SPL", "spl"],
+        "extensions": [".spl"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "cbc",
+        "aliases": ["Carbon Black Cloud", "CBC", "cbc"],
+        "extensions": [".cbc"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "kql",
+        "scopeName": "source.kql",
+        "path": "./syntaxes/kql.tmLanguage.json"
+      },
+      {
+        "scopeName": "text.opentide.yaml.kql.injection",
+        "path": "./syntaxes/kql-injection.json",
+        "injectTo": [
+          "source.yaml"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.kql": "kql"
+        }
+      },
+      {
+        "language": "spl",
+        "scopeName": "source.spl",
+        "path": "./syntaxes/spl.tmLanguage.json"
+      },
+      {
+        "scopeName": "text.opentide.yaml.spl.injection",
+        "path": "./syntaxes/spl-injection.json",
+        "injectTo": [
+          "source.yaml"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.spl": "spl"
+        }
+      },
+      {
+        "language": "cbc",
+        "scopeName": "source.cbc",
+        "path": "./syntaxes/cbc.tmLanguage.json"
+      },
+      {
+        "scopeName": "text.opentide.yaml.cbc.injection",
+        "path": "./syntaxes/cbc-injection.json",
+        "injectTo": [
+          "source.yaml"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.cbc": "cbc"
+        }
+      }
+    ]
+  }
+}

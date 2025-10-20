@@ -1,0 +1,232 @@
+{
+  "scopeName": "source.kql",
+  "name": "Kusto Query Language",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#tables"
+    },
+    {
+      "include": "#properties"
+    },
+    {
+      "include": "#timespan"
+    },
+    {
+      "include": "#variables"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+            "name": "comment.line.double-slash.otquery",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.otquery",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.otquery",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.otquery",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.otquery",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.otquery",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.backtick.otquery",
+          "begin": "`",
+          "end": "`"
+        },
+        {
+          "name": "string.quoted.verbatim.otquery",
+          "begin": "@\"",
+          "end": "\""
+        },
+        {
+          "name": "string.quoted.multiline.otquery",
+          "begin": "```",
+          "end": "```"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.otquery",
+          "match": "\\b0[xX][0-9a-fA-F]+\\b"
+        },
+        {
+          "name": "constant.numeric.decimal.otquery",
+          "match": "\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
+        },
+        {
+          "name": "constant.language.boolean.otquery",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "constant.language.null.otquery",
+          "match": "\\b(null)\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.otquery",
+          "match": "\\b(where|project|extend|summarize|sort|order|top|limit|take|sample|distinct|join|union|lookup|as|by|on|in|has|contains|startswith|endswith|matches|search|let|print|consume|evaluate|invoke|render|sort|order)\\b"
+        },
+        {
+          "name": "keyword.control.kql",
+          "match": "\\b(and|or|not)\\b"
+        },
+        {
+          "name": "keyword.operator.comparison.kql",
+          "match": "(==|!=|<>|<=|>=|<|>|=~|!~|contains|!contains|has|!has|startswith|!startswith|endswith|!endswith|matches regex|in|!in|between)"
+        },
+        {
+          "name": "keyword.other.otquery",
+          "match": "\\b(asc|desc|nulls first|nulls last|granny|with|kind|hint\\.remote|hint\\.strategy|shuffle|broadcast)\\b"
+        },
+        {
+          "name": "keyword.control.join.otquery",
+          "match": "\\b(inner|leftouter|rightouter|fullouter|leftanti|rightanti|leftsemi|rightsemi)\\b"
+        },
+        {
+          "name": "keyword.control.mv-expand.otquery",
+          "match": "\\b(mv-expand|mv-apply)\\b"
+        },
+        {
+          "name": "keyword.other.case.otquery",
+          "match": "\\b(case|iff|iif)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.pipe.otquery",
+          "match": "\\|"
+        },
+        {
+          "name": "keyword.operator.arithmetic.otquery",
+          "match": "(\\+|\\-|\\*|\\/|%)"
+        },
+        {
+          "name": "keyword.operator.assignment.otquery",
+          "match": "="
+        },
+        {
+          "name": "punctuation.separator.otquery",
+          "match": "(,|;)"
+        },
+        {
+          "name": "punctuation.brackets.otquery",
+          "match": "(\\(|\\)|\\[|\\]|\\{|\\})"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "support.function.aggregate.otquery",
+          "match": "\\b(count|countif|dcount|dcountif|sum|sumif|avg|avgif|min|minif|max|maxif|stdev|stdevif|variance|varianceif|percentile|percentiles|make_set|make_list|make_bag|arg_max|arg_min|any|take_any|bin|buildschema|hll|hll_merge|tdigest|tdigest_merge)\\b"
+        },
+        {
+          "name": "support.function.scalar.otquery",
+          "match": "\\b(ago|now|datetime|timespan|totimespan|todatetime|tostring|toint|tolong|todouble|tobool|toguid|parse|parse_json|parse_xml|parse_csv|extract|extract_all|split|substring|strlen|strcat|strcat_delim|strcat_array|replace|replace_regex|trim|trim_start|trim_end|toupper|tolower|indexof|indexof_regex|reverse|base64_encode_tostring|base64_decode_tostring|url_encode|url_decode|hash|hash_sha256|hash_md5|isempty|isnotempty|isnull|isnotnull|coalesce|case|iff|iif|array_length|array_concat|array_slice|bag_keys|bag_remove_keys|pack|pack_array|pack_all|parse_path|format_datetime|format_timespan|datetime_add|datetime_diff|datetime_part|startofday|startofweek|startofmonth|startofyear|endofday|endofweek|endofmonth|endofyear|getmonth|getyear|dayofweek|dayofmonth|dayofyear|weekofyear|hourofday|between|series_fir|series_iir|series_fit_line|series_fit_2lines|series_outliers|series_decompose|series_periods_detect|series_periods_validate|series_stats|series_fill_backward|series_fill_const|series_fill_forward|series_fill_linear|geo_point_in_circle|geo_point_in_polygon|geo_distance_2points|geo_point_to_s2cell|geo_s2cell_to_central_point|ipv4_compare|ipv4_is_match|ipv4_is_private|parse_ipv4|parse_ipv4_mask|format_ipv4|format_ipv4_mask|ipv6_compare|ipv6_is_match|parse_ipv6|parse_ipv6_mask|format_ipv6|materialize|row_number|prev|next|row_cumsum|row_rank)\\b"
+        },
+        {
+          "name": "support.function.window.otquery",
+          "match": "\\b(row_number|rank|dense_rank|percent_rank|cume_dist|ntile|lag|lead|first_value|last_value|percentile_cont|percentile_disc)\\b"
+        },
+        {
+          "name": "support.function.special.otquery",
+          "match": "\\b(toscalar|materialize|serialize|cursor_before_or_at|cursor_after|cursor_current|extent_id|extent_tags|ingestion_time)\\b"
+        }
+      ]
+    },
+    "tables": {
+      "patterns": [
+        {
+          "name": "entity.name.type.table.otquery",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b(?=\\s*\\|)"
+        },
+        {
+          "name": "entity.name.type.table.otquery",
+          "match": "^\\s*[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "properties": {
+      "patterns": [
+        {
+          "name": "variable.other.property.otquery",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b(?=\\s*(==|!=|<>|<=|>=|<|>|=~|!~|contains|has|startswith|endswith|in))"
+        },
+        {
+          "name": "variable.other.column.otquery",
+          "match": "(?<=by\\s+)\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        },
+        {
+          "name": "variable.other.column.otquery",
+          "match": "(?<=project\\s+)\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "timespan": {
+      "patterns": [
+        {
+          "name": "constant.numeric.timespan.otquery",
+          "match": "\\b\\d+(\\.\\d+)?(d|h|m|s|ms|microsecond|tick)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.otquery",
+          "match": "(?<=let\\s+)\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}
