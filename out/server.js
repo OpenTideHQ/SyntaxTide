@@ -45,6 +45,7 @@ const spl_commands_database_1 = require("./spl-commands-database");
 const spl_functions_database_1 = require("./spl-functions-database");
 const spl_commands_enhanced_1 = require("./spl-commands-enhanced");
 const spl_validation_1 = require("./spl-validation");
+const spl_parameter_parser_1 = require("./spl-parameter-parser");
 // Create a connection for the server
 const connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
 // Document-specific variable tracking
@@ -363,8 +364,37 @@ connection.onCompletion((_textDocumentPosition) => {
         });
     }
     connection.console.log(`[Autocomplete] Document has ${allVariables.size} total variables, ${availableVariables.size} available at position line ${position.line}`);
+    // Check if we're after a pipe operator to suggest commands
+    const afterPipe = beforeCursor.trim().endsWith('|') ||
+        /\|\s*$/.test(beforeCursor) ||
+        /\|\s+[a-z]*$/.test(beforeCursor); // Typing command name
+    // Check if we're inside a command (after command name) to suggest parameters
+    const pipeMatch = beforeCursor.match(/\|\s*([a-z]+)\s+/);
+    if (pipeMatch) {
+        // We're inside a command - suggest parameters
+        const commandName = pipeMatch[1];
+        const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
+        if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+            connection.console.log(`[Autocomplete] Suggesting parameters for command '${commandName}'`);
+            // Get suggested parameters using the parameter parser
+            const suggestedParams = (0, spl_parameter_parser_1.getSuggestedParameters)(beforeCursor, position.character, cmd.parameters);
+            // Add parameter suggestions
+            suggestedParams.forEach((param) => {
+                const isNamed = param.type === spl_commands_database_1.ParameterType.NAMED;
+                const insertText = isNamed ? `${param.name}=` : param.name;
+                completionItems.push({
+                    label: param.name,
+                    kind: isNamed ? node_1.CompletionItemKind.Property : node_1.CompletionItemKind.Field,
+                    insertText: insertText,
+                    detail: `${param.required ? 'Required' : 'Optional'} ${param.type}`,
+                    documentation: `${param.description}\n\nSyntax: ${param.syntax}${param.defaultValue ? `\nDefault: ${param.defaultValue}` : ''}`,
+                    sortText: param.required ? `0_${param.name}` : `1_${param.name}` // Required params first
+                });
+            });
+        }
+    }
     // Suggest SPL commands after pipe operator
-    if (beforeCursor.trim().endsWith('|') || beforeCursor.includes('|')) {
+    if (afterPipe) {
         spl_commands_database_1.SPL_COMMANDS.forEach((cmd, index) => {
             completionItems.push({
                 label: cmd.name,
@@ -519,6 +549,43 @@ connection.onHover((_textDocumentPosition) => {
         return null;
     }
     const word = line.substring(wordRange.start, wordRange.end);
+    // Check if we're hovering over a parameter in a command
+    const pipeMatch = line.match(/\|\s*([a-z]+)\s+/);
+    if (pipeMatch) {
+        const commandName = pipeMatch[1];
+        const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
+        if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+            // Find the parameter at this position
+            const commandStart = line.indexOf(commandName);
+            const afterCommand = line.substring(commandStart + commandName.length);
+            const param = (0, spl_parameter_parser_1.getParameterAtPosition)(afterCommand, position.character - (commandStart + commandName.length), cmd.parameters);
+            if (param && param.definition) {
+                const def = param.definition;
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: [
+                            `**${def.name}** - ${def.required ? 'Required' : 'Optional'} ${def.type} parameter`,
+                            '',
+                            def.description,
+                            '',
+                            '**Syntax:**',
+                            '```spl',
+                            def.syntax,
+                            '```',
+                            ...(def.defaultValue ? ['', `**Default:** \`${def.defaultValue}\``] : []),
+                            ...(def.valueType ? ['', `**Type:** \`${def.valueType}\``] : []),
+                            ...(def.examples && def.examples.length > 0 ? [
+                                '',
+                                '**Examples:**',
+                                ...def.examples.map(ex => `- \`${ex}\``)
+                            ] : [])
+                        ].join('\n')
+                    }
+                };
+            }
+        }
+    }
     // Check if it's a user-defined variable
     const variables = documentVariables.get(document.uri) || new Set();
     if (variables.has(word)) {

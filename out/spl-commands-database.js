@@ -4,9 +4,47 @@
  * Source: Splunk SPL 10.0 Reference - 158 commands analyzed
  * Categories: Data Manipulation, Stats & Aggregation, ML & Analytics, Visualization, etc.
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SPL_COMMANDS = void 0;
+exports.SPL_COMMANDS = exports.ParameterType = void 0;
 exports.getSPLCommand = getSPLCommand;
+exports.getCommandParameters = getCommandParameters;
+const PARAMS = __importStar(require("./spl-command-parameters"));
+// Import and re-export parameter types to avoid circular dependencies
+var spl_parameter_types_1 = require("./spl-parameter-types");
+Object.defineProperty(exports, "ParameterType", { enumerable: true, get: function () { return spl_parameter_types_1.ParameterType; } });
 exports.SPL_COMMANDS = [
     {
         name: 'abstract',
@@ -16,6 +54,7 @@ exports.SPL_COMMANDS = [
         syntax: 'abstract [maxterms=<int>] [maxlines=<int>]',
         requiredArgs: 0,
         optionalArgs: 2,
+        parameters: PARAMS.ABSTRACT_PARAMS,
         examples: ['... | abstract maxlines=5', '... | abstract maxterms=20'],
         relatedCommands: ['highlight']
     },
@@ -27,6 +66,7 @@ exports.SPL_COMMANDS = [
         syntax: 'accum <field> [AS <newfield>]',
         requiredArgs: 1,
         optionalArgs: 1,
+        parameters: PARAMS.ACCUM_PARAMS,
         examples: ['... | accum count', '... | accum bytes AS total_bytes'],
         relatedCommands: ['autoregress', 'delta', 'streamstats', 'trendline']
     },
@@ -38,6 +78,7 @@ exports.SPL_COMMANDS = [
         syntax: 'addcoltotals [labelfield=<field>] [label=<string>] [<wc-field-list>]',
         requiredArgs: 0,
         optionalArgs: 3,
+        parameters: PARAMS.ADDCOLTOTALS_PARAMS,
         examples: ['... | addcoltotals', '... | addcoltotals labelfield=Total label=TOTAL bytes duration'],
         relatedCommands: ['addtotals', 'stats']
     },
@@ -60,6 +101,7 @@ exports.SPL_COMMANDS = [
         syntax: 'addtotals [row=<bool>] [col=<bool>] [labelfield=<field>] [label=<string>] [fieldname=<field>] [<field-list>]',
         requiredArgs: 0,
         optionalArgs: 6,
+        parameters: PARAMS.ADDTOTALS_PARAMS,
         examples: ['... | addtotals', '... | addtotals fieldname=sum', '... | addtotals col=t labelfield=products label="Quarterly Totals"'],
         relatedCommands: ['stats', 'addcoltotals']
     },
@@ -1796,5 +1838,12 @@ exports.SPL_COMMANDS = [
  */
 function getSPLCommand(name) {
     return exports.SPL_COMMANDS.find(cmd => cmd.name.toLowerCase() === name.toLowerCase());
+}
+/**
+ * Get parameter definitions for a command
+ */
+function getCommandParameters(name) {
+    const cmd = getSPLCommand(name);
+    return cmd?.parameters || [];
 }
 //# sourceMappingURL=spl-commands-database.js.map

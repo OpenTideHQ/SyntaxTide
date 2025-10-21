@@ -5,8 +5,9 @@
 
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver/node';
 import { getSPLCommandEnhanced, SPLCommandEnhanced, SPLArgument } from './spl-commands-enhanced';
-import { getSPLCommand } from './spl-commands-database';
+import { getSPLCommand, SPLCommand, ParameterDefinition } from './spl-commands-database';
 import { SPL_FUNCTIONS, SPLFunction } from './spl-functions-database';
+import { validateCommandParameters, ParsedParameter } from './spl-parameter-parser';
 
 export interface ValidationContext {
 	line: string;
@@ -790,6 +791,61 @@ export function normalizeSPLQuery(lines: string[]): Array<{
 	return normalized;
 }
 
+/**
+ * Validate command parameters using the new parameter parser
+ */
+function validateCommandParametersNew(
+	commandName: string,
+	commandLine: string,
+	context: ValidationContext,
+	commandStartPos?: number
+): Diagnostic[] {
+	const diagnostics: Diagnostic[] = [];
+	
+	const cmd = getSPLCommand(commandName);
+	if (!cmd || !cmd.parameters || cmd.parameters.length === 0) {
+		return diagnostics; // No parameters to validate
+	}
+	
+	// Use parameter parser to validate
+	const result = validateCommandParameters(commandName, commandLine, cmd.parameters);
+	
+	const charOffset = context.charOffset || 0;
+	const commandPos = commandStartPos !== undefined ? commandStartPos : 0;
+	
+	// Report missing required parameters
+	for (const missingParam of result.missingRequired) {
+		diagnostics.push({
+			severity: DiagnosticSeverity.Error,
+			range: {
+				start: { line: context.lineNumber, character: commandPos + charOffset },
+				end: { line: context.lineNumber, character: commandPos + commandName.length + charOffset }
+			},
+			message: `Missing required parameter '${missingParam.name}': ${missingParam.description}`,
+			source: 'spl-validation'
+		});
+	}
+	
+	// Report unknown parameters (with less severity - might be field names)
+	for (const unknownParam of result.unknown) {
+		// Only report as warning if it's a named parameter (key=value)
+		// Don't warn about positional/field parameters (could be user fields)
+		if (unknownParam.type === 'named') {
+			diagnostics.push({
+				severity: DiagnosticSeverity.Warning,
+				range: {
+					start: { line: context.lineNumber, character: unknownParam.startPos + charOffset },
+					end: { line: context.lineNumber, character: unknownParam.endPos + charOffset }
+				},
+				message: `Unknown parameter '${unknownParam.name}' for command '${commandName}'. Check command documentation.`,
+				source: 'spl-validation'
+			});
+		}
+	}
+	
+	return diagnostics;
+}
+
 export function validateSPLLine(line: string, lineNumber: number, documentUri: string, charOffset: number = 0, availableVariables?: Set<string>): Diagnostic[] {
 	const diagnostics: Diagnostic[] = [];
 	const context: ValidationContext = { line, lineNumber, documentUri, charOffset, availableVariables };
@@ -859,6 +915,13 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 				// Validate command arguments with enhanced metadata, passing command position
 				const argDiags = validateCommandArguments(commandName, argumentsStr, context, commandStart);
 				diagnostics.push(...argDiags);
+			}
+			
+			// NEW: Also validate with parameter parser if parameters are defined
+			const cmd = getSPLCommand(commandName);
+			if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+				const paramDiags = validateCommandParametersNew(commandName, commandPart, context, commandStart);
+				diagnostics.push(...paramDiags);
 			}
 			// If not in enhanced database, command is valid but we skip detailed validation
 		}

@@ -13,6 +13,7 @@ const node_1 = require("vscode-languageserver/node");
 const spl_commands_enhanced_1 = require("./spl-commands-enhanced");
 const spl_commands_database_1 = require("./spl-commands-database");
 const spl_functions_database_1 = require("./spl-functions-database");
+const spl_parameter_parser_1 = require("./spl-parameter-parser");
 /**
  * Parse function signature to extract parameter information
  * Handles SPL syntax conventions:
@@ -667,6 +668,49 @@ function normalizeSPLQuery(lines) {
     }
     return normalized;
 }
+/**
+ * Validate command parameters using the new parameter parser
+ */
+function validateCommandParametersNew(commandName, commandLine, context, commandStartPos) {
+    const diagnostics = [];
+    const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
+    if (!cmd || !cmd.parameters || cmd.parameters.length === 0) {
+        return diagnostics; // No parameters to validate
+    }
+    // Use parameter parser to validate
+    const result = (0, spl_parameter_parser_1.validateCommandParameters)(commandName, commandLine, cmd.parameters);
+    const charOffset = context.charOffset || 0;
+    const commandPos = commandStartPos !== undefined ? commandStartPos : 0;
+    // Report missing required parameters
+    for (const missingParam of result.missingRequired) {
+        diagnostics.push({
+            severity: node_1.DiagnosticSeverity.Error,
+            range: {
+                start: { line: context.lineNumber, character: commandPos + charOffset },
+                end: { line: context.lineNumber, character: commandPos + commandName.length + charOffset }
+            },
+            message: `Missing required parameter '${missingParam.name}': ${missingParam.description}`,
+            source: 'spl-validation'
+        });
+    }
+    // Report unknown parameters (with less severity - might be field names)
+    for (const unknownParam of result.unknown) {
+        // Only report as warning if it's a named parameter (key=value)
+        // Don't warn about positional/field parameters (could be user fields)
+        if (unknownParam.type === 'named') {
+            diagnostics.push({
+                severity: node_1.DiagnosticSeverity.Warning,
+                range: {
+                    start: { line: context.lineNumber, character: unknownParam.startPos + charOffset },
+                    end: { line: context.lineNumber, character: unknownParam.endPos + charOffset }
+                },
+                message: `Unknown parameter '${unknownParam.name}' for command '${commandName}'. Check command documentation.`,
+                source: 'spl-validation'
+            });
+        }
+    }
+    return diagnostics;
+}
 function validateSPLLine(line, lineNumber, documentUri, charOffset = 0, availableVariables) {
     const diagnostics = [];
     const context = { line, lineNumber, documentUri, charOffset, availableVariables };
@@ -730,6 +774,12 @@ function validateSPLLine(line, lineNumber, documentUri, charOffset = 0, availabl
                 // Validate command arguments with enhanced metadata, passing command position
                 const argDiags = validateCommandArguments(commandName, argumentsStr, context, commandStart);
                 diagnostics.push(...argDiags);
+            }
+            // NEW: Also validate with parameter parser if parameters are defined
+            const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
+            if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+                const paramDiags = validateCommandParametersNew(commandName, commandPart, context, commandStart);
+                diagnostics.push(...paramDiags);
             }
             // If not in enhanced database, command is valid but we skip detailed validation
         }

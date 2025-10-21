@@ -4,14 +4,27 @@
  * Categories: Data Manipulation, Stats & Aggregation, ML & Analytics, Visualization, etc.
  */
 
+import * as PARAMS from './spl-command-parameters';
+
+// Import and re-export parameter types to avoid circular dependencies
+export { ParameterType, ParameterDefinition } from './spl-parameter-types';
+import { ParameterType, ParameterDefinition } from './spl-parameter-types';
+
+/**
+ * Enhanced SPL Command interface with detailed parameter support
+ */
 export interface SPLCommand {
 	name: string;
 	type: string;
 	category: string;
 	description: string;
 	syntax: string;
+	/** Legacy: total count of required arguments (kept for compatibility) */
 	requiredArgs: number;
+	/** Legacy: total count of optional arguments (kept for compatibility) */
 	optionalArgs: number;
+	/** Detailed parameter definitions */
+	parameters?: ParameterDefinition[];
 	examples?: string[];
 	relatedCommands?: string[];
 }
@@ -25,6 +38,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'abstract [maxterms=<int>] [maxlines=<int>]',
 		requiredArgs: 0,
 		optionalArgs: 2,
+		parameters: PARAMS.ABSTRACT_PARAMS,
 		examples: ['... | abstract maxlines=5', '... | abstract maxterms=20'],
 		relatedCommands: ['highlight']
 	},
@@ -36,6 +50,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'accum <field> [AS <newfield>]',
 		requiredArgs: 1,
 		optionalArgs: 1,
+		parameters: PARAMS.ACCUM_PARAMS,
 		examples: ['... | accum count', '... | accum bytes AS total_bytes'],
 		relatedCommands: ['autoregress', 'delta', 'streamstats', 'trendline']
 	},
@@ -47,6 +62,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'addcoltotals [labelfield=<field>] [label=<string>] [<wc-field-list>]',
 		requiredArgs: 0,
 		optionalArgs: 3,
+		parameters: PARAMS.ADDCOLTOTALS_PARAMS,
 		examples: ['... | addcoltotals', '... | addcoltotals labelfield=Total label=TOTAL bytes duration'],
 		relatedCommands: ['addtotals', 'stats']
 	},
@@ -69,6 +85,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'addtotals [row=<bool>] [col=<bool>] [labelfield=<field>] [label=<string>] [fieldname=<field>] [<field-list>]',
 		requiredArgs: 0,
 		optionalArgs: 6,
+		parameters: PARAMS.ADDTOTALS_PARAMS,
 		examples: ['... | addtotals', '... | addtotals fieldname=sum', '... | addtotals col=t labelfield=products label="Quarterly Totals"'],
 		relatedCommands: ['stats', 'addcoltotals']
 	},
@@ -1805,5 +1822,13 @@ export const SPL_COMMANDS: SPLCommand[] = [
  * Lookup helper function to find command by name
  */
 export function getSPLCommand(name: string): SPLCommand | undefined {
-return SPL_COMMANDS.find(cmd => cmd.name.toLowerCase() === name.toLowerCase());
+	return SPL_COMMANDS.find(cmd => cmd.name.toLowerCase() === name.toLowerCase());
+}
+
+/**
+ * Get parameter definitions for a command
+ */
+export function getCommandParameters(name: string): ParameterDefinition[] {
+	const cmd = getSPLCommand(name);
+	return cmd?.parameters || [];
 }

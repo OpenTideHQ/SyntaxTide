@@ -24,10 +24,11 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import * as yaml from 'yaml';
 
-import { SPL_COMMANDS, getSPLCommand } from './spl-commands-database';
+import { SPL_COMMANDS, getSPLCommand, ParameterDefinition, ParameterType } from './spl-commands-database';
 import { SPL_FUNCTIONS } from './spl-functions-database';
 import { getSPLCommandEnhanced } from './spl-commands-enhanced';
 import { validateSPLLine, normalizeSPLQuery } from './spl-validation';
+import { getSuggestedParameters, getParameterAtPosition } from './spl-parameter-parser';
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -415,8 +416,43 @@ connection.onCompletion(
 		
 		connection.console.log(`[Autocomplete] Document has ${allVariables.size} total variables, ${availableVariables.size} available at position line ${position.line}`);
 
+		// Check if we're after a pipe operator to suggest commands
+		const afterPipe = beforeCursor.trim().endsWith('|') || 
+		                  /\|\s*$/.test(beforeCursor) ||
+		                  /\|\s+[a-z]*$/.test(beforeCursor); // Typing command name
+		
+		// Check if we're inside a command (after command name) to suggest parameters
+		const pipeMatch = beforeCursor.match(/\|\s*([a-z]+)\s+/);
+		
+		if (pipeMatch) {
+			// We're inside a command - suggest parameters
+			const commandName = pipeMatch[1];
+			const cmd = getSPLCommand(commandName);
+			if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+				connection.console.log(`[Autocomplete] Suggesting parameters for command '${commandName}'`);
+				
+				// Get suggested parameters using the parameter parser
+				const suggestedParams = getSuggestedParameters(beforeCursor, position.character, cmd.parameters);
+				
+				// Add parameter suggestions
+				suggestedParams.forEach((param: ParameterDefinition) => {
+					const isNamed = param.type === ParameterType.NAMED;
+					const insertText = isNamed ? `${param.name}=` : param.name;
+					
+					completionItems.push({
+						label: param.name,
+						kind: isNamed ? CompletionItemKind.Property : CompletionItemKind.Field,
+						insertText: insertText,
+						detail: `${param.required ? 'Required' : 'Optional'} ${param.type}`,
+						documentation: `${param.description}\n\nSyntax: ${param.syntax}${param.defaultValue ? `\nDefault: ${param.defaultValue}` : ''}`,
+						sortText: param.required ? `0_${param.name}` : `1_${param.name}` // Required params first
+					});
+				});
+			}
+		}
+		
 		// Suggest SPL commands after pipe operator
-		if (beforeCursor.trim().endsWith('|') || beforeCursor.includes('|')) {
+		if (afterPipe) {
 			SPL_COMMANDS.forEach((cmd, index) => {
 				completionItems.push({
 					label: cmd.name,
@@ -585,6 +621,45 @@ connection.onHover(
 		}
 
 		const word = line.substring(wordRange.start, wordRange.end);
+		
+		// Check if we're hovering over a parameter in a command
+		const pipeMatch = line.match(/\|\s*([a-z]+)\s+/);
+		if (pipeMatch) {
+			const commandName = pipeMatch[1];
+			const cmd = getSPLCommand(commandName);
+			if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+				// Find the parameter at this position
+				const commandStart = line.indexOf(commandName);
+				const afterCommand = line.substring(commandStart + commandName.length);
+				const param = getParameterAtPosition(afterCommand, position.character - (commandStart + commandName.length), cmd.parameters);
+				
+				if (param && param.definition) {
+					const def = param.definition;
+					return {
+						contents: {
+							kind: 'markdown',
+							value: [
+								`**${def.name}** - ${def.required ? 'Required' : 'Optional'} ${def.type} parameter`,
+								'',
+								def.description,
+								'',
+								'**Syntax:**',
+								'```spl',
+								def.syntax,
+								'```',
+								...(def.defaultValue ? ['', `**Default:** \`${def.defaultValue}\``] : []),
+								...(def.valueType ? ['', `**Type:** \`${def.valueType}\``] : []),
+								...(def.examples && def.examples.length > 0 ? [
+									'',
+									'**Examples:**',
+									...def.examples.map(ex => `- \`${ex}\``)
+								] : [])
+							].join('\n')
+						}
+					};
+				}
+			}
+		}
 
 		// Check if it's a user-defined variable
 		const variables = documentVariables.get(document.uri) || new Set<string>();
