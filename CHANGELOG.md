@@ -524,6 +524,12 @@ All notable changes to the "OpenTide Query Syntax Highlighting" extension will b
 
 ## [Unreleased]
 
+### Changed - Autocomplete icon differentiation
+
+- ✅ **Improved Visuals**: SPL command completions now use the 'Keyword' icon while evaluation functions use the 'Function' icon in autocomplete to make commands and functions visually distinct.
+
+- ✅ **Improved Visuals**: SPL command completions now use the 'Class' icon while evaluation functions use the 'Function' icon in autocomplete to make commands and functions visually distinct.
+
 ### Planned for 0.2.0
 - Complete SPL (Splunk) grammar
 - SPL injection for `configurations.splunk.query` fields

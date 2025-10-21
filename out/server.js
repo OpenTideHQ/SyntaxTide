@@ -401,7 +401,8 @@ connection.onCompletion((_textDocumentPosition) => {
         spl_commands_database_1.SPL_COMMANDS.forEach((cmd, index) => {
             completionItems.push({
                 label: cmd.name,
-                kind: node_1.CompletionItemKind.Function,
+                // Use 'Class' to visually differentiate SPL commands from functions in the UI
+                kind: node_1.CompletionItemKind.Class,
                 data: index,
                 detail: `${cmd.type} - ${cmd.category}`,
                 documentation: cmd.description
@@ -413,7 +414,8 @@ connection.onCompletion((_textDocumentPosition) => {
         spl_functions_database_1.SPL_FUNCTIONS.forEach((func, index) => {
             completionItems.push({
                 label: func.name,
-                kind: node_1.CompletionItemKind.Method,
+                // Use 'Function' to clearly indicate evaluation functions
+                kind: node_1.CompletionItemKind.Function,
                 data: 1000 + index,
                 detail: `${func.category} function`,
                 documentation: `${func.description}\n\nSignature: ${func.signature}`

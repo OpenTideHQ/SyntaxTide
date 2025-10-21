@@ -1,45 +1,17 @@
----
-# Quick Validation Demo
-# This file demonstrates the advanced validation features
-
 name: "Validation Demo"
 description: "Shows validation errors and correct usage"
 
 configurations:
   splunk:
     query: |
-      # Example 1: Correct usage - no errors
-      index=main sourcetype=access_combined
-      | stats count by status
-      | eval score=if(count > 100, "high", "low")
-      | accum count AS total
-      
-      # Example 2: Missing required argument
-      # Uncomment to see error:
-      # | accum
-      # Expected error: "Command 'accum' requires 1 argument: field"
-      
-      # Example 3: Invalid argument type
-      # Uncomment to see error:
-      # | abstract maxlines="not_a_number"
-      # Expected error: "Argument 'maxlines' expects a number"
-      
-      # Example 4: Function with too few parameters
-      # Uncomment to see error:
-      # | eval result=if(status==200)
-      # Expected error: "Function 'if()' requires at least 3 parameters"
-      
-      # Example 5: Function with correct parameters - no errors
-      | eval result=if(status==200, "success", "failure")
-      | eval rounded=round(response_time, 2)
-      | eval first_valid=coalesce(field1, field2, "default")
-      
-      # Example 6: Unknown command
-      # Uncomment to see error:
-      # | invalidcommand field
-      # Expected error: "Unknown SPL command: 'invalidcommand'"
-      
-      # Example 7: Hover over 'abstract' to see detailed argument info
-      | abstract maxlines=10 maxterms=50
-      
----
+      `cisco_secure_firewall` EventType=IntrusionEvent
+      | stats count AS total_alerts, dc(signature_id) AS sig_count, values(SnortRuleGroups) AS snort_rule_groups, values(connection_id) AS connection_id, values(rule) AS rule, values(dest_port) AS dest_port, values(transport) AS transport, values(app) AS app, values(signature) AS signature, values(src_ip) AS src_ip BY _time dest_ip signature_id
+      | lookup cisco_snort_ids_to_threat_mapping signature_id OUTPUT threat, category, message
+      | where isnotnull(threat)
+      | bin _time span=1d
+      | stats count AS Total_Alerts, dc(signature_id) AS sig_count, values(signature_id) AS signature_id, values(category) AS category, values(message) AS message, values(snort_rule_groups) AS snort_rule_groups, values(connection_id) AS connection_id, values(rule) AS rule, values(dest_port) AS dest_port, values(transport) AS transport, values(app) AS app, values(signature) AS signature, values(src_ip) AS src_ip BY _time dest_ip threat
+      | lookup threat_snort_count threat OUTPUT description, distinct_count_snort_ids
+      | table _time, dest_ip, src_ip, threat, category, message, description, signature_id, signature, snort_rule_groups, sig_count, distinct_count_snort_ids, connection_id, rule, dest_port, transport, app
+      | where sig_count >= distinct_count_snort_ids
+      | `cisco_secure_firewall___intrusion_events_by_threat_activity_filter`
+      | 

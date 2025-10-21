@@ -464,27 +464,29 @@ connection.onCompletion(
 		// Suggest SPL commands after pipe operator
 		if (afterPipe) {
 			SPL_COMMANDS.forEach((cmd, index) => {
-				completionItems.push({
-					label: cmd.name,
-					kind: CompletionItemKind.Function,
-					data: index,
-					detail: `${cmd.type} - ${cmd.category}`,
-					documentation: cmd.description
-				});
+                completionItems.push({
+                	label: cmd.name,
+                	// Use 'Class' to visually differentiate SPL commands from functions in the UI
+                	kind: CompletionItemKind.Class,
+                	data: index,
+                	detail: `${cmd.type} - ${cmd.category}`,
+                	documentation: cmd.description
+                });
 			});
 		}
 
 		// Suggest functions in eval/where context
 		if (beforeCursor.includes('eval') || beforeCursor.includes('where')) {
-			SPL_FUNCTIONS.forEach((func, index) => {
-				completionItems.push({
-					label: func.name,
-					kind: CompletionItemKind.Method,
-					data: 1000 + index,
-					detail: `${func.category} function`,
-					documentation: `${func.description}\n\nSignature: ${func.signature}`
-				});
-			});
+            SPL_FUNCTIONS.forEach((func, index) => {
+            	completionItems.push({
+            		label: func.name,
+            		// Use 'Function' to clearly indicate evaluation functions
+            		kind: CompletionItemKind.Function,
+            		data: 1000 + index,
+            		detail: `${func.category} function`,
+            		documentation: `${func.description}\n\nSignature: ${func.signature}`
+            	});
+            });
 		}
 
 		// Suggest user-defined variables that were declared before current line
