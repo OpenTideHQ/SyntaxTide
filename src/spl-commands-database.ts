@@ -764,7 +764,8 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		requiredArgs: 1,
 		optionalArgs: 4,
 		examples: ['| inputlookup users_lookup', '| inputlookup append=true where user="admin" users_lookup'],
-		relatedCommands: ['lookup', 'outputlookup', 'inputcsv']
+		relatedCommands: ['lookup', 'outputlookup', 'inputcsv'],
+		parameters: PARAMS.INPUTLOOKUP_PARAMS
 	},
 	{
 		name: 'inputintelligence',
@@ -1083,7 +1084,8 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		requiredArgs: 1,
 		optionalArgs: 6,
 		examples: ['... | outputlookup users_lookup', '... | outputlookup append=true key_field=user_id users_lookup'],
-		relatedCommands: ['inputlookup', 'lookup', 'outputcsv']
+		relatedCommands: ['inputlookup', 'lookup', 'outputcsv'],
+		parameters: PARAMS.OUTPUTLOOKUP_PARAMS
 	},
 	{
 		name: 'outputtext',

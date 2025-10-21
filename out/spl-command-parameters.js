@@ -5,7 +5,7 @@
  * DO NOT EDIT MANUALLY - Run generate-command-parameters.py to regenerate
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CONVERT_PARAMS = exports.COLLECT_PARAMS = exports.COFILTER_PARAMS = exports.CLUSTER_PARAMS = exports.CHART_PARAMS = exports.BUCKETDIR_PARAMS = exports.BUCKET_PARAMS = exports.BIN_PARAMS = exports.AUTOREGRESS_PARAMS = exports.ASSOCIATE_PARAMS = exports.ARULES_PARAMS = exports.APPENDPIPE_PARAMS = exports.APPENDCOLS_PARAMS = exports.APPEND_PARAMS = exports.ANOMALYDETECTION_PARAMS = exports.ANOMALOUSVALUE_PARAMS = exports.ANOMALIES_PARAMS = exports.ANALYZEFIELDS_PARAMS = exports.ADDTOTALS_PARAMS = exports.ADDCOLTOTALS_PARAMS = exports.ACCUM_PARAMS = exports.ABSTRACT_PARAMS = void 0;
+exports.OUTPUTLOOKUP_PARAMS = exports.INPUTLOOKUP_PARAMS = exports.CONVERT_PARAMS = exports.COLLECT_PARAMS = exports.COFILTER_PARAMS = exports.CLUSTER_PARAMS = exports.CHART_PARAMS = exports.BUCKETDIR_PARAMS = exports.BUCKET_PARAMS = exports.BIN_PARAMS = exports.AUTOREGRESS_PARAMS = exports.ASSOCIATE_PARAMS = exports.ARULES_PARAMS = exports.APPENDPIPE_PARAMS = exports.APPENDCOLS_PARAMS = exports.APPEND_PARAMS = exports.ANOMALYDETECTION_PARAMS = exports.ANOMALOUSVALUE_PARAMS = exports.ANOMALIES_PARAMS = exports.ANALYZEFIELDS_PARAMS = exports.ADDTOTALS_PARAMS = exports.ADDCOLTOTALS_PARAMS = exports.ACCUM_PARAMS = exports.ABSTRACT_PARAMS = void 0;
 const spl_parameter_types_1 = require("./spl-parameter-types");
 // abstract command parameters
 exports.ABSTRACT_PARAMS = [
@@ -914,6 +914,106 @@ exports.CONVERT_PARAMS = [
         syntax: '<string>',
         description: `Creates a new field with the name you specify to place the converted values into.`,
         valueType: 'string'
+    },
+];
+// inputlookup command parameters
+exports.INPUTLOOKUP_PARAMS = [
+    {
+        name: 'filename',
+        type: spl_parameter_types_1.ParameterType.POSITIONAL,
+        required: true,
+        syntax: '<filename>',
+        description: `The name of the lookup table file or KV store collection. Can include .csv extension or omit it.`,
+        valueType: 'string'
+    },
+    {
+        name: 'append',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'append=<bool>',
+        description: `If set to true, appends the lookup table data to the current set of results instead of replacing it.`,
+        valueType: 'bool',
+        defaultValue: 'false'
+    },
+    {
+        name: 'start',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'start=<int>',
+        description: `Specifies the starting offset to begin reading the lookup table. Used for pagination.`,
+        valueType: 'int',
+        defaultValue: '0'
+    },
+    {
+        name: 'max',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'max=<int>',
+        description: `Specifies the maximum number of results to return from the lookup table.`,
+        valueType: 'int'
+    },
+    {
+        name: 'strict',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'strict=<bool>',
+        description: `If set to true, raises an error if the lookup file does not exist.`,
+        valueType: 'bool',
+        defaultValue: 'true'
+    },
+];
+// outputlookup command parameters
+exports.OUTPUTLOOKUP_PARAMS = [
+    {
+        name: 'filename',
+        type: spl_parameter_types_1.ParameterType.POSITIONAL,
+        required: true,
+        syntax: '<filename>',
+        description: `The name of the lookup table file or KV store collection to write to. Can include .csv extension or omit it.`,
+        valueType: 'string'
+    },
+    {
+        name: 'append',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'append=<bool>',
+        description: `If set to true, appends results to the existing lookup table instead of overwriting it.`,
+        valueType: 'bool',
+        defaultValue: 'false'
+    },
+    {
+        name: 'create_empty',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'create_empty=<bool>',
+        description: `If set to true, creates an empty lookup table file when there are no results.`,
+        valueType: 'bool',
+        defaultValue: 'false'
+    },
+    {
+        name: 'createinapp',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'createinapp=<bool>',
+        description: `If set to true, the lookup table is created in the app context instead of the user context.`,
+        valueType: 'bool',
+        defaultValue: 'false'
+    },
+    {
+        name: 'max',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'max=<int>',
+        description: `Specifies the maximum number of results to write to the lookup table.`,
+        valueType: 'int'
+    },
+    {
+        name: 'key_field',
+        type: spl_parameter_types_1.ParameterType.NAMED,
+        required: false,
+        syntax: 'key_field=<field>',
+        description: `Specifies the field to use as the key for KV store collections. Used for upsert operations.`,
+        valueType: 'field'
     },
 ];
 //# sourceMappingURL=spl-command-parameters.js.map

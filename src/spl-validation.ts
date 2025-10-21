@@ -479,8 +479,13 @@ function validateVariableUsage(line: string, context: ValidationContext): Diagno
 	}
 	
 	// - Lookup commands (lookup table names are external)
-	if (line.match(/\|\s*lookup\b/i)) {
-		return diagnostics; // Lookup tables are external references
+	// Note: For inputlookup/outputlookup, we only want to skip validation of the table name,
+	// not the entire line (to preserve parameter validation and WHERE clause fields)
+	const isLookupCommand = line.match(/\|\s*lookup\b/i);
+	const isInputOutputLookup = line.match(/\|\s*(input|output)lookup\b/i);
+	
+	if (isLookupCommand && !isInputOutputLookup) {
+		return diagnostics; // Lookup command - too complex to parse table names vs fields
 	}
 	
 	// - Replace command (has string literals that look like fields)
@@ -553,6 +558,17 @@ function validateVariableUsage(line: string, context: ValidationContext): Diagno
 	const fieldPattern = /\b([a-z_][a-z0-9_]*)\b/gi;
 	const matches = [...line.matchAll(fieldPattern)];
 	
+	// For inputlookup/outputlookup, identify the lookup table name to skip
+	let lookupTableName: string | null = null;
+	if (isInputOutputLookup) {
+		// Extract the first token after inputlookup/outputlookup that's not a parameter or keyword
+		// Format: | inputlookup [options] <table_name> [WHERE ...]
+		const lookupMatch = line.match(/\|\s*(?:input|output)lookup\s+(?:(?:\w+=\S+)\s+)*?([a-z_][a-z0-9_]*(?:\.csv)?)/i);
+		if (lookupMatch) {
+			lookupTableName = lookupMatch[1].replace(/\.csv$/i, ''); // Strip .csv if present
+		}
+	}
+	
 	// SPL keywords and built-in fields to exclude
 	const keywords = new Set([
 		'eval', 'where', 'stats', 'by', 'as', 'and', 'or', 'not', 'in',
@@ -569,6 +585,11 @@ function validateVariableUsage(line: string, context: ValidationContext): Diagno
 		
 		// Skip if inside a string literal
 		if (isInsideString(position)) {
+			continue;
+		}
+		
+		// Skip if this is the lookup table name in inputlookup/outputlookup
+		if (lookupTableName && fieldName.toLowerCase() === lookupTableName.toLowerCase()) {
 			continue;
 		}
 		

@@ -402,8 +402,12 @@ function validateVariableUsage(line, context) {
         return diagnostics; // External data source references
     }
     // - Lookup commands (lookup table names are external)
-    if (line.match(/\|\s*lookup\b/i)) {
-        return diagnostics; // Lookup tables are external references
+    // Note: For inputlookup/outputlookup, we only want to skip validation of the table name,
+    // not the entire line (to preserve parameter validation and WHERE clause fields)
+    const isLookupCommand = line.match(/\|\s*lookup\b/i);
+    const isInputOutputLookup = line.match(/\|\s*(input|output)lookup\b/i);
+    if (isLookupCommand && !isInputOutputLookup) {
+        return diagnostics; // Lookup command - too complex to parse table names vs fields
     }
     // - Replace command (has string literals that look like fields)
     if (line.match(/\|\s*replace\b/i)) {
@@ -466,6 +470,16 @@ function validateVariableUsage(line, context) {
     // Extract potential field references (simplified - excludes keywords and function names)
     const fieldPattern = /\b([a-z_][a-z0-9_]*)\b/gi;
     const matches = [...line.matchAll(fieldPattern)];
+    // For inputlookup/outputlookup, identify the lookup table name to skip
+    let lookupTableName = null;
+    if (isInputOutputLookup) {
+        // Extract the first token after inputlookup/outputlookup that's not a parameter or keyword
+        // Format: | inputlookup [options] <table_name> [WHERE ...]
+        const lookupMatch = line.match(/\|\s*(?:input|output)lookup\s+(?:(?:\w+=\S+)\s+)*?([a-z_][a-z0-9_]*(?:\.csv)?)/i);
+        if (lookupMatch) {
+            lookupTableName = lookupMatch[1].replace(/\.csv$/i, ''); // Strip .csv if present
+        }
+    }
     // SPL keywords and built-in fields to exclude
     const keywords = new Set([
         'eval', 'where', 'stats', 'by', 'as', 'and', 'or', 'not', 'in',
@@ -479,6 +493,10 @@ function validateVariableUsage(line, context) {
         const position = match.index || 0;
         // Skip if inside a string literal
         if (isInsideString(position)) {
+            continue;
+        }
+        // Skip if this is the lookup table name in inputlookup/outputlookup
+        if (lookupTableName && fieldName.toLowerCase() === lookupTableName.toLowerCase()) {
             continue;
         }
         // Skip if already checked, is a keyword, or is a known function
@@ -678,7 +696,7 @@ function validateCommandParametersNew(commandName, commandLine, context, command
         logger(`  commandLine: "${commandLine}"`);
         logger(`  context.line: "${context.line}"`);
         logger(`  context.line.length: ${context.line.length}`);
-        logger(`  First 20 chars of context.line: "${context.line.substring(0, 20)}"`);
+        logger(`  First 50 chars of context.line: "${context.line.substring(0, 50)}"`);
         logger(`  context.lineNumber: ${context.lineNumber}`);
         logger(`  context.charOffset: ${context.charOffset}`);
         logger(`  commandStartPos: ${commandStartPos}`);

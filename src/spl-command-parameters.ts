@@ -936,3 +936,106 @@ export const CONVERT_PARAMS: ParameterDefinition[] = [
 		valueType: 'string'
 	},
 ];
+
+// inputlookup command parameters
+export const INPUTLOOKUP_PARAMS: ParameterDefinition[] = [
+	{
+		name: 'filename',
+		type: ParameterType.POSITIONAL,
+		required: true,
+		syntax: '<filename>',
+		description: `The name of the lookup table file or KV store collection. Can include .csv extension or omit it.`,
+		valueType: 'string'
+	},
+	{
+		name: 'append',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'append=<bool>',
+		description: `If set to true, appends the lookup table data to the current set of results instead of replacing it.`,
+		valueType: 'bool',
+		defaultValue: 'false'
+	},
+	{
+		name: 'start',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'start=<int>',
+		description: `Specifies the starting offset to begin reading the lookup table. Used for pagination.`,
+		valueType: 'int',
+		defaultValue: '0'
+	},
+	{
+		name: 'max',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'max=<int>',
+		description: `Specifies the maximum number of results to return from the lookup table.`,
+		valueType: 'int'
+	},
+	{
+		name: 'strict',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'strict=<bool>',
+		description: `If set to true, raises an error if the lookup file does not exist.`,
+		valueType: 'bool',
+		defaultValue: 'true'
+	},
+];
+
+// outputlookup command parameters
+export const OUTPUTLOOKUP_PARAMS: ParameterDefinition[] = [
+	{
+		name: 'filename',
+		type: ParameterType.POSITIONAL,
+		required: true,
+		syntax: '<filename>',
+		description: `The name of the lookup table file or KV store collection to write to. Can include .csv extension or omit it.`,
+		valueType: 'string'
+	},
+	{
+		name: 'append',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'append=<bool>',
+		description: `If set to true, appends results to the existing lookup table instead of overwriting it.`,
+		valueType: 'bool',
+		defaultValue: 'false'
+	},
+	{
+		name: 'create_empty',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'create_empty=<bool>',
+		description: `If set to true, creates an empty lookup table file when there are no results.`,
+		valueType: 'bool',
+		defaultValue: 'false'
+	},
+	{
+		name: 'createinapp',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'createinapp=<bool>',
+		description: `If set to true, the lookup table is created in the app context instead of the user context.`,
+		valueType: 'bool',
+		defaultValue: 'false'
+	},
+	{
+		name: 'max',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'max=<int>',
+		description: `Specifies the maximum number of results to write to the lookup table.`,
+		valueType: 'int'
+	},
+	{
+		name: 'key_field',
+		type: ParameterType.NAMED,
+		required: false,
+		syntax: 'key_field=<field>',
+		description: `Specifies the field to use as the key for KV store collections. Used for upsert operations.`,
+		valueType: 'field'
+	},
+];
+

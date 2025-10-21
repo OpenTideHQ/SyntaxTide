@@ -20,7 +20,7 @@ configurations:
       | abstract maxlines=5
       
       # Test 5: Command with unknown named parameter (should warn)
-      | abstract unknownparam=123
+      | abstract unknownparam=123 max(test) 
       
       # Test 6: addtotals with field list (positional parameters)
       | addtotals bytes duration response_time
@@ -70,7 +70,7 @@ configurations:
       | inputlookup threat_intel.csv
       
       # Test 18: inputlookup with WHERE clause
-      | inputlookup user_data.csv WHERE department="Engineering"
+      | inputlookup  user_data.csv WHERE department="Engineering"
       
       # Test 19: inputlookup with options
       | inputlookup append=true strict=false users.csv
