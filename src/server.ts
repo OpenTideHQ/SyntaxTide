@@ -430,6 +430,12 @@ connection.onCompletion(
 		const afterPipe = beforeCursor.trim().endsWith('|') || 
 		                  /\|\s*$/.test(beforeCursor) ||
 		                  /\|\s+[a-z]*$/.test(beforeCursor); // Typing command name
+
+		// Strict check: cursor is immediately after '|' with only whitespace in between
+		// This enforces the UX: right after '|' only command completions should appear.
+		const lastPipe = beforeCursor.lastIndexOf('|');
+		const textAfterLastPipe = lastPipe >= 0 ? beforeCursor.substring(lastPipe + 1) : '';
+		const isJustAfterPipe = !!(lastPipe >= 0 && textAfterLastPipe.trim() === '');
 		
 		// Check if we're inside a command (after command name) to suggest parameters
 		const pipeMatch = beforeCursor.match(/\|\s*([a-z]+)\s+/);
@@ -473,6 +479,13 @@ connection.onCompletion(
                 	documentation: cmd.description
                 });
 			});
+
+			// If the cursor is directly after the pipe with no non-space characters,
+			// only return command completions (do not include variables/functions yet)
+			if (isJustAfterPipe) {
+				connection.console.log('[Autocomplete] Cursor just after pipe: restricting suggestions to commands only');
+				return completionItems;
+			}
 		}
 
 		// Suggest functions in eval/where context
