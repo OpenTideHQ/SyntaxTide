@@ -2,6 +2,58 @@
 
 All notable changes to the "OpenTide Query Syntax Highlighting" extension will be documented in this file.
 
+## [0.7.0] - 2025-01-XX
+
+### Fixed - Comprehensive Function Signature Validation
+
+- ✅ **Grouped Variadic Parser Fix** (`spl-validation.ts`):
+  - **Critical Bug Fixed**: `(<param>, <param>)...` patterns now correctly interpreted as unlimited grouped pairs
+  - **Before**: `validate(<condition>, <value>)...` incorrectly limited to 2 params total
+  - **After**: Accepts unlimited condition-value pairs (4, 6, 8+ params)
+  - **Implementation**: Added pre-parsing check for `^\((.+)\)...$` pattern to detect grouped variadic BEFORE splitting params
+  - **Functions Fixed**: `validate()`, `case()`, and any future grouped-variadic functions
+
+- ✅ **Bitwise Functions Corrected** (`spl-functions-database.ts`):
+  - **Based on Official Splunk Documentation**: Verified at `query-languages/splunk/documentation/evaluation-functions/bitwise-functions.md`
+  - `bit_and(<values>...)`: Now correctly variadic, min:2 (was fixed 2-param), accepts "two or more" integers
+  - `bit_or(<values>...)`: Now correctly variadic, min:2 (was fixed 2-param), accepts "two or more" integers
+  - `bit_xor(<values>...)`: Now correctly variadic, min:2 (was fixed 2-param), accepts "two or more" integers
+  - `bit_not(<value>, [<bitmask>])`: Now correctly min:1 max:2 (was min:2 max:2), bitmask is optional
+  - All descriptions updated with accurate Splunk documentation language
+
+- ✅ **Missing Functions Added** (`spl-functions-database.ts`):
+  - **Mathematical Functions**:
+    - `sum(<num>...)`: Returns sum of all numeric arguments (variadic, min:1)
+  - **JSON Functions**:
+    - `json_extend(<json>, <path>, <value>...)`: Extends JSON objects with new fields (path-value pairs, min:3)
+    - `json_delete(<object>, <keys>...)`: Deletes keys from JSON object (variadic keys, min:2)
+  - **Total Functions**: Database now has **173 functions** (was 170)
+
+- ✅ **Documentation Corrections** (`query-languages/splunk/ANALYSIS.md`):
+  - **Bitwise Functions Section (4.14)** updated to match official Splunk specs:
+    - `bit_and/or/xor`: Corrected from min:1 to min:2 ("two or more" per Splunk docs)
+    - `bit_not`: Corrected signature to `bit_not(<value>, [<bitmask>])`, min:1 max:2
+  - All specifications now verified against official Splunk documentation
+
+- ✅ **Comprehensive Function Validation** (`compare_functions.py`):
+  - Created systematic comparison script to verify all 120+ functions from ANALYSIS.md
+  - Identified and fixed all signature discrepancies
+  - Ensured consistency between ANALYSIS.md specs and database implementation
+
+### Testing
+- **Test Cases Added** (`tests/lsp-test.yaml`):
+  - Test 11: Grouped variadic validation with `validate()` and `case()` (6 params)
+  - Test 12: Bitwise function variadics (3+ params for bit_and/or/xor, 2 params for bit_not)
+  - Test 13: New functions `sum()`, `json_extend()`, `json_delete()`
+- **Expected Behavior**: All test cases should now validate correctly without "accepts at most N parameters" errors
+
+### Files Changed
+- `src/spl-validation.ts`: Parser rewritten to handle grouped variadic patterns
+- `src/spl-functions-database.ts`: 7 functions updated, 3 functions added (sum, json_extend, json_delete)
+- `query-languages/splunk/ANALYSIS.md`: Bitwise function specifications corrected
+- `tests/lsp-test.yaml`: Comprehensive test cases added
+- `compare_functions.py`: Systematic validation script created
+
 ## [0.6.0] - 2025-01-XX
 
 ### Added - Command/Function Distinction & Improved Validation

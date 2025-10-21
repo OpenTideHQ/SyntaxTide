@@ -49,7 +49,7 @@ configurations:
       | eval joined=mvjoin(tags, ",")
       
       ```Test 8: Statistical Functions```
-      | eval average=strp
+      | eval average=avg(1, 2, 3, 4, 5)
       | eval maximum=max(field1, field2)
       | eval minimum=min(score1, score2, score3)
       
@@ -65,3 +65,20 @@ configurations:
       | where bytes > avg_bytes
       | fillnull value=0 missing_field
       | rename clientip as "Client IP", status as "HTTP Status"
+      
+      ```Test 11: Grouped Variadic Functions - validate() with multiple pairs```
+      ```This should NOT show an error - validate accepts unlimited condition-value pairs```
+      | eval valid_field=validate(isnotnull(field1), field1, isnotnull(field2), field2, isnotnull(field3), field3)
+      | eval case_result=case(status>200, "error", status==200, "ok", status<200, "redirect")
+      
+      ```Test 12: Bitwise Functions - Variadic (2+ params)```
+      | eval and_result=bit_and(12, 9, 5)
+      | eval or_result=bit_or(4, 2, 1)
+      | eval xor_result=bit_xor(3, 2, 6)
+      | eval not_result=bit_not(9, tonumber("1111", 2))
+      
+      ```Test 13: New Functions - sum, json_extend, json_delete```
+      | eval total=sum(price, tax, shipping, discount)
+      | eval extended_json=json_extend(data, "$.key1", val1, "$.key2", val2)
+      | eval cleaned_json=json_delete(data, "field1", "field2", "old_key")
+

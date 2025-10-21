@@ -35,6 +35,21 @@ function parseFunctionSignature(signature) {
     if (!paramsStr.trim()) {
         return { minParams: 0, maxParams: 0, isVariadic: false, paramNames: [] };
     }
+    // Check for grouped variadic pattern FIRST: entire signature like "(<p1>, <p2>)..."
+    // This matches: validate(<condition>, <value>)... or case(<condition>, <value>)...
+    const groupedVariadicMatch = paramsStr.match(/^\((.+)\)\.\.\.$/);
+    if (groupedVariadicMatch) {
+        // Count parameters in the group
+        const groupContent = groupedVariadicMatch[1];
+        const groupParams = groupContent.split(',').map(p => p.trim());
+        const minParams = groupParams.length; // At least one complete group required
+        return {
+            minParams,
+            maxParams: Infinity,
+            isVariadic: true,
+            paramNames: groupParams
+        };
+    }
     // Split by commas, but handle nested brackets and angle brackets
     const params = [];
     let depth = 0;
@@ -62,26 +77,16 @@ function parseFunctionSignature(signature) {
     for (let i = 0; i < params.length; i++) {
         const param = params[i];
         paramNames.push(param);
-        // Check for variadic: <param>... or (<param>, <param>)...
+        // Check for simple variadic: <param>...
         if (param.includes('...')) {
             isVariadic = true;
             maxParams = Infinity;
-            // For grouped variadic like (<condition>, <value>)...
-            // Count the parameters in the group
-            if (param.startsWith('(') && param.endsWith(')...')) {
-                const groupContent = param.slice(1, param.indexOf(')'));
-                const groupParams = groupContent.split(',').length;
-                minParams = groupParams; // At least one group required
-            }
-            else {
-                // For simple variadic like <value1>, <value2>, ...
-                // Count required params before the variadic marker
-                const beforeVariadic = params.slice(0, i);
-                minParams = beforeVariadic.filter(p => !p.startsWith('[') && !p.endsWith(']')).length;
-                // If the variadic param itself isn't optional, add 1
-                if (!param.startsWith('[')) {
-                    minParams += 1;
-                }
+            // Count required params before the variadic marker
+            const beforeVariadic = params.slice(0, i);
+            minParams = beforeVariadic.filter(p => !p.startsWith('[') && !p.endsWith(']')).length;
+            // If the variadic param itself isn't optional, add 1
+            if (!param.startsWith('[')) {
+                minParams += 1;
             }
             break; // No more params after variadic
         }

@@ -255,6 +255,15 @@ exports.SPL_FUNCTIONS = [
         examples: ['exact(0.2) * 8.250'],
         relatedFunctions: ['round']
     },
+    {
+        name: 'sum',
+        category: 'Mathematical',
+        description: 'Returns the sum of all numeric arguments. Takes one or more numeric values.',
+        signature: 'sum(<num>...)',
+        returnType: 'number',
+        examples: ['sum(1, 2, 3, 4, 5)', 'sum(value1, value2, value3)', 'eval total=sum(price, tax, shipping)'],
+        relatedFunctions: ['avg', 'max', 'min']
+    },
     // Statistical Eval Functions
     {
         name: 'avg',
@@ -716,37 +725,37 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'bit_and',
         category: 'Bitwise',
-        description: 'Performs bitwise AND operation on two integers.',
-        signature: 'bit_and(<X>, <Y>)',
+        description: 'Performs bitwise AND operation on two or more nonnegative integers. Takes an arbitrary number of comma-separated arguments and returns the result of a logical AND operation on each pair of corresponding bits.',
+        signature: 'bit_and(<values>...)',
         returnType: 'number',
-        examples: ['bit_and(15, 7)', 'eval result=bit_and(flags, mask)'],
+        examples: ['bit_and(12, 9)', 'bit_and(15, 7, 3)', 'eval result=bit_and(flags, mask, filter)'],
         relatedFunctions: ['bit_or', 'bit_xor', 'bit_not']
     },
     {
         name: 'bit_or',
         category: 'Bitwise',
-        description: 'Performs bitwise OR operation on two integers.',
-        signature: 'bit_or(<X>, <Y>)',
+        description: 'Performs bitwise OR operation on two or more nonnegative integers. Takes an arbitrary number of comma-separated arguments and returns the result of a logical OR operation on each pair of corresponding bits.',
+        signature: 'bit_or(<values>...)',
         returnType: 'number',
-        examples: ['bit_or(8, 4)', 'eval flags=bit_or(flag1, flag2)'],
+        examples: ['bit_or(4, 2)', 'bit_or(8, 4, 2)', 'eval flags=bit_or(flag1, flag2, flag3)'],
         relatedFunctions: ['bit_and', 'bit_xor', 'bit_not']
     },
     {
         name: 'bit_xor',
         category: 'Bitwise',
-        description: 'Performs bitwise XOR operation on two integers.',
-        signature: 'bit_xor(<X>, <Y>)',
+        description: 'Performs bitwise XOR operation on two or more nonnegative integers. Takes an arbitrary number of comma-separated arguments and returns the result of a logical XOR operation on each pair of corresponding bits.',
+        signature: 'bit_xor(<values>...)',
         returnType: 'number',
-        examples: ['bit_xor(12, 10)', 'eval toggle=bit_xor(state, flag)'],
+        examples: ['bit_xor(3, 2)', 'bit_xor(12, 10, 6)', 'eval toggle=bit_xor(state, flag1, flag2)'],
         relatedFunctions: ['bit_and', 'bit_or', 'bit_not']
     },
     {
         name: 'bit_not',
         category: 'Bitwise',
-        description: 'Performs bitwise NOT operation on an integer.',
-        signature: 'bit_not(<X>)',
+        description: 'Performs bitwise NOT operation on an integer. Takes an optional second argument as a bitmask (default 2^53-1) that is used in an AND operation with the result.',
+        signature: 'bit_not(<value>, [<bitmask>])',
         returnType: 'number',
-        examples: ['bit_not(15)', 'eval inverted=bit_not(mask)'],
+        examples: ['bit_not(9)', 'bit_not(9, tonumber("1111", 2))', 'eval inverted=bit_not(mask, 0xFF)'],
         relatedFunctions: ['bit_and', 'bit_or', 'bit_xor']
     },
     {
@@ -917,10 +926,28 @@ exports.SPL_FUNCTIONS = [
         name: 'json_append',
         category: 'JSON',
         description: 'Appends a value to a JSON array at the specified path.',
-        signature: 'json_append(<json>, <path>, <value>)',
+        signature: 'json_append(<json>, <path>, <value>...)',
         returnType: 'string',
-        examples: ['json_append(data, "$.items", "new_item")', 'eval updated=json_append(json_field, "$.tags", tag)'],
-        relatedFunctions: ['json_array', 'json_set']
+        examples: ['json_append(data, "$.items", "new_item")', 'eval updated=json_append(json_field, "$.tags", tag)', 'json_append(json, "$.array", val1, val2, val3)'],
+        relatedFunctions: ['json_array', 'json_set', 'json_extend']
+    },
+    {
+        name: 'json_extend',
+        category: 'JSON',
+        description: 'Extends JSON objects with new fields. Takes path-value pairs.',
+        signature: 'json_extend(<json>, <path>, <value>...)',
+        returnType: 'string',
+        examples: ['json_extend(data, "$.newfield", "value")', 'eval extended=json_extend(json, "$.key1", val1, "$.key2", val2)'],
+        relatedFunctions: ['json_set', 'json_object', 'json_append']
+    },
+    {
+        name: 'json_delete',
+        category: 'JSON',
+        description: 'Deletes keys from a JSON object. Takes multiple keys to delete.',
+        signature: 'json_delete(<object>, <keys>...)',
+        returnType: 'string',
+        examples: ['json_delete(data, "field1")', 'eval cleaned=json_delete(json, "key1", "key2", "key3")'],
+        relatedFunctions: ['json_set', 'json_object']
     },
     // Additional Common Functions
     {

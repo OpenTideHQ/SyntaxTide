@@ -802,10 +802,10 @@ false()
 
 | Function | Signature | Min | Max | Description |
 |----------|-----------|-----|-----|-------------|
-| `bit_and` | `bit_and(<values>...)` | 1 | ∞ | Bitwise AND of all values |
-| `bit_or` | `bit_or(<values>...)` | 1 | ∞ | Bitwise OR of all values |
-| `bit_not` | `bit_not(<value>, <bitmask>)` | 2 | 2 | Bitwise NOT with bitmask |
-| `bit_xor` | `bit_xor(<values>...)` | 1 | ∞ | Bitwise XOR of all values |
+| `bit_and` | `bit_and(<values>...)` | 2 | ∞ | Bitwise AND of two or more values |
+| `bit_or` | `bit_or(<values>...)` | 2 | ∞ | Bitwise OR of two or more values |
+| `bit_not` | `bit_not(<value>, [<bitmask>])` | 1 | 2 | Bitwise NOT with optional bitmask |
+| `bit_xor` | `bit_xor(<values>...)` | 2 | ∞ | Bitwise XOR of two or more values |
 | `bit_shift_left` | `bit_shift_left(<value>, <shift>)` | 2 | 2 | Left bit shift |
 | `bit_shift_right` | `bit_shift_right(<value>, <shift>)` | 2 | 2 | Right bit shift |
 
