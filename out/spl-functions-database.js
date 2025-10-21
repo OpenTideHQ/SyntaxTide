@@ -11,8 +11,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'case',
         category: 'Comparison & Conditional',
-        description: 'Returns the first value for which the condition evaluates to true. Similar to switch/case statements in other languages.',
-        signature: 'case(<condition>, <value>, ...)',
+        description: 'Returns the first value for which the condition evaluates to true. Similar to switch/case statements in other languages. Takes pairs of conditions and values.',
+        signature: 'case(<condition>, <value>)...',
         returnType: 'any',
         examples: [
             'case(status==200, "OK", status==404, "Not Found", status==500, "Error", true(), "Unknown")',
@@ -35,8 +35,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'coalesce',
         category: 'Comparison & Conditional',
-        description: 'Returns the first value that is not null.',
-        signature: 'coalesce(<values>...)',
+        description: 'Returns the first value that is not null. Accepts any number of arguments.',
+        signature: 'coalesce(<value1>, <value2>, ...)',
         returnType: 'any',
         examples: [
             'coalesce(field1, field2, "default")',
@@ -59,8 +59,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'in',
         category: 'Comparison & Conditional',
-        description: 'Returns TRUE if the value is in the list.',
-        signature: 'in(<field>, <list>)',
+        description: 'Returns TRUE if the value of <field> matches any of the provided values. Takes a variadic list of comma-separated values to check against.',
+        signature: 'in(<field>, <value1>, <value2>, ...)',
         returnType: 'boolean',
         examples: [
             'in(status, "200", "201", "204")',
@@ -122,8 +122,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'validate',
         category: 'Comparison & Conditional',
-        description: 'Similar to case(), but returns the condition value instead of a specified value.',
-        signature: 'validate(<condition>, <value>, ...)',
+        description: 'Similar to case(), but returns the condition value instead of a specified value. Takes pairs of conditions and values.',
+        signature: 'validate(<condition>, <value>)...',
         returnType: 'any',
         examples: ['validate(isnotnull(field), field, isnotnull(field2), field2)'],
         relatedFunctions: ['case', 'if']
@@ -177,10 +177,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'round',
         category: 'Mathematical',
-        description: 'Rounds a number to the specified number of decimal places.',
-        signature: 'round(<num>, <precision>)',
+        description: 'Rounds a number to the specified number of decimal places. The precision parameter is optional and defaults to 0.',
+        signature: 'round(<num>, [<precision>])',
         returnType: 'number',
-        examples: ['round(3.14159, 2)', 'round(value, 0)'],
+        examples: ['round(3.14159, 2)', 'round(value, 0)', 'round(value)'],
         relatedFunctions: ['ceiling', 'floor', 'sigfig']
     },
     {
@@ -231,10 +231,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'log',
         category: 'Mathematical',
-        description: 'Returns the logarithm of a number with the specified base.',
-        signature: 'log(<num>, <base>)',
+        description: 'Returns the logarithm of a number with the specified base. The base parameter is optional and defaults to 10.',
+        signature: 'log(<num>, [<base>])',
         returnType: 'number',
-        examples: ['log(100, 10)', 'log(value, 2)'],
+        examples: ['log(100, 10)', 'log(value, 2)', 'log(value)'],
         relatedFunctions: ['ln', 'exp']
     },
     {
@@ -259,8 +259,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'avg',
         category: 'Statistical',
-        description: 'Returns the average of the values (eval context).',
-        signature: 'avg(<values>...)',
+        description: 'Returns the average of the values (eval context). Accepts any number of numeric arguments.',
+        signature: 'avg(<value1>, <value2>, ...)',
         returnType: 'number',
         examples: ['avg(value1, value2, value3)'],
         relatedFunctions: ['sum', 'max', 'min']
@@ -268,8 +268,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'max',
         category: 'Statistical',
-        description: 'Returns the maximum value (eval context).',
-        signature: 'max(<values>...)',
+        description: 'Returns the maximum value (eval context). Accepts any number of numeric arguments.',
+        signature: 'max(<value1>, <value2>, ...)',
         returnType: 'number',
         examples: ['max(value1, value2, value3)'],
         relatedFunctions: ['min', 'avg']
@@ -277,8 +277,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'min',
         category: 'Statistical',
-        description: 'Returns the minimum value (eval context).',
-        signature: 'min(<values>...)',
+        description: 'Returns the minimum value (eval context). Accepts any number of numeric arguments.',
+        signature: 'min(<value1>, <value2>, ...)',
         returnType: 'number',
         examples: ['min(value1, value2, value3)'],
         relatedFunctions: ['max', 'avg']
@@ -323,8 +323,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'substr',
         category: 'Text',
-        description: 'Returns a substring of a string.',
-        signature: 'substr(<str>, <start>, <length>)',
+        description: 'Returns a substring of a string. The length parameter is optional and defaults to extracting to the end of the string.',
+        signature: 'substr(<str>, <start>, [<length>])',
         returnType: 'string',
         examples: ['substr(message, 1, 10)', 'substr(field, 5)'],
         relatedFunctions: ['len', 'trim']
@@ -332,8 +332,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'trim',
         category: 'Text',
-        description: 'Removes leading and trailing characters from a string.',
-        signature: 'trim(<str>, <trim_chars>)',
+        description: 'Removes leading and trailing characters from a string. The <trim_chars> argument is optional and defaults to whitespace.',
+        signature: 'trim(<str>, [<trim_chars>])',
         returnType: 'string',
         examples: ['trim(field)', 'trim(field, " \\t")'],
         relatedFunctions: ['ltrim', 'rtrim']
@@ -341,8 +341,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'ltrim',
         category: 'Text',
-        description: 'Removes leading characters from a string.',
-        signature: 'ltrim(<str>, <trim_chars>)',
+        description: 'Removes leading characters from a string. The <trim_chars> argument is optional and defaults to whitespace.',
+        signature: 'ltrim(<str>, [<trim_chars>])',
         returnType: 'string',
         examples: ['ltrim(field)', 'ltrim(field, " ")'],
         relatedFunctions: ['trim', 'rtrim']
@@ -350,8 +350,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'rtrim',
         category: 'Text',
-        description: 'Removes trailing characters from a string.',
-        signature: 'rtrim(<str>, <trim_chars>)',
+        description: 'Removes trailing characters from a string. The <trim_chars> argument is optional and defaults to whitespace.',
+        signature: 'rtrim(<str>, [<trim_chars>])',
         returnType: 'string',
         examples: ['rtrim(field)', 'rtrim(field, " ")'],
         relatedFunctions: ['trim', 'ltrim']
@@ -368,10 +368,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'spath',
         category: 'Text',
-        description: 'Extracts values from XML or JSON formatted text.',
-        signature: 'spath(<value>, <path>)',
+        description: 'Extracts values from XML or JSON formatted text. The path argument is optional.',
+        signature: 'spath(<value>, [<path>])',
         returnType: 'string',
-        examples: ['spath(json_field, "path.to.value")'],
+        examples: ['spath(json_field, "path.to.value")', 'spath(json_field)'],
         relatedFunctions: ['json_extract']
     },
     {
@@ -387,8 +387,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvappend',
         category: 'Multivalue',
-        description: 'Combines the values of multiple fields into a multivalue field.',
-        signature: 'mvappend(<values>...)',
+        description: 'Combines the values of multiple fields into a multivalue field. Accepts any number of arguments.',
+        signature: 'mvappend(<value1>, <value2>, ...)',
         returnType: 'multivalue',
         examples: ['mvappend(field1, field2, field3)'],
         relatedFunctions: ['mvjoin', 'split']
@@ -432,8 +432,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvindex',
         category: 'Multivalue',
-        description: 'Returns values from a multivalue field at the specified indices.',
-        signature: 'mvindex(<mv>, <start>, <end>)',
+        description: 'Returns values from a multivalue field at the specified indices. The end parameter is optional.',
+        signature: 'mvindex(<mv>, <start>, [<end>])',
         returnType: 'multivalue',
         examples: ['mvindex(emails, 0)', 'mvindex(list, 2, 4)'],
         relatedFunctions: ['mvcount', 'mvfind']
@@ -459,8 +459,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvrange',
         category: 'Multivalue',
-        description: 'Creates a multivalue field with a range of numbers.',
-        signature: 'mvrange(<start>, <end>, <step>)',
+        description: 'Creates a multivalue field with a range of numbers. The step parameter is optional and defaults to 1.',
+        signature: 'mvrange(<start>, <end>, [<step>])',
         returnType: 'multivalue',
         examples: ['mvrange(0, 10, 2)', 'mvrange(1, 100)'],
         relatedFunctions: []
@@ -477,10 +477,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvzip',
         category: 'Multivalue',
-        description: 'Combines values from two multivalue fields.',
-        signature: 'mvzip(<mv_left>, <mv_right>, <delim>)',
+        description: 'Combines values from two multivalue fields. The delimiter parameter is optional and defaults to a comma.',
+        signature: 'mvzip(<mv_left>, <mv_right>, [<delim>])',
         returnType: 'multivalue',
-        examples: ['mvzip(names, emails, ":")'],
+        examples: ['mvzip(names, emails, ":")', 'mvzip(names, emails)'],
         relatedFunctions: ['mvappend', 'mvjoin']
     },
     {
@@ -579,19 +579,19 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'tostring',
         category: 'Conversion',
-        description: 'Converts a value to a string.',
-        signature: 'tostring(<value>, <format>)',
+        description: 'Converts a value to a string with optional formatting (commas, hex, duration).',
+        signature: 'tostring(<value>, [<format>])',
         returnType: 'string',
-        examples: ['tostring(count)', 'tostring(value, "commas")'],
+        examples: ['tostring(count)', 'tostring(value, "commas")', 'tostring(bytes, "duration")'],
         relatedFunctions: ['tonumber', 'tobool']
     },
     {
         name: 'tonumber',
         category: 'Conversion',
-        description: 'Converts a value to a number.',
-        signature: 'tonumber(<str>, <base>)',
+        description: 'Converts a string to a number with optional base (default 10, supports 2-36).',
+        signature: 'tonumber(<str>, [<base>])',
         returnType: 'number',
-        examples: ['tonumber("123")', 'tonumber("FF", 16)'],
+        examples: ['tonumber("123")', 'tonumber("FF", 16)', 'tonumber("1010", 2)'],
         relatedFunctions: ['tostring', 'toint']
     },
     {
@@ -600,34 +600,34 @@ exports.SPL_FUNCTIONS = [
         description: 'Converts a value to a boolean.',
         signature: 'tobool(<value>)',
         returnType: 'boolean',
-        examples: ['tobool("true")', 'tobool(1)'],
+        examples: ['tobool("true")', 'tobool(1)', 'tobool(0)'],
         relatedFunctions: ['tostring', 'tonumber']
     },
     {
         name: 'toint',
         category: 'Conversion',
-        description: 'Converts a value to an integer.',
-        signature: 'toint(<value>, <base>)',
+        description: 'Converts a value to an integer with optional base (default 10, supports 2-36).',
+        signature: 'toint(<value>, [<base>])',
         returnType: 'number',
-        examples: ['toint("123")', 'toint("FF", 16)'],
+        examples: ['toint("123")', 'toint("FF", 16)', 'toint("777", 8)'],
         relatedFunctions: ['tonumber', 'todouble']
     },
     {
         name: 'todouble',
         category: 'Conversion',
-        description: 'Converts a value to a double.',
-        signature: 'todouble(<value>, <base>)',
+        description: 'Converts a value to a double-precision floating point number with optional base.',
+        signature: 'todouble(<value>, [<base>])',
         returnType: 'number',
-        examples: ['todouble("3.14")'],
+        examples: ['todouble("3.14")', 'todouble("1.5e10")'],
         relatedFunctions: ['toint', 'tonumber']
     },
     {
         name: 'printf',
         category: 'Conversion',
-        description: 'Formats values using printf-style formatting.',
-        signature: 'printf(<format>, <arguments>)',
+        description: 'Formats values using printf-style formatting with variadic arguments.',
+        signature: 'printf(<format>, <arg1>, <arg2>, ...)',
         returnType: 'string',
-        examples: ['printf("%d items", count)', 'printf("%.2f", value)'],
+        examples: ['printf("%d items", count)', 'printf("%.2f", value)', 'printf("%s: %d", name, total)'],
         relatedFunctions: ['tostring']
     },
     // Informational Functions

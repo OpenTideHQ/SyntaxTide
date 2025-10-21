@@ -116,8 +116,9 @@ documents.onDidChangeContent(change => {
 /**
  * Extract SPL query from YAML configuration block
  * Handles both single and multi-document YAML files
+ * Returns the query text and the line offset where it starts in the file
  */
-function extractSPLQuery(yamlContent) {
+function extractSPLQuery(yamlContent, fullText) {
     try {
         // Handle array of documents (from parseAllDocuments)
         const documents = Array.isArray(yamlContent) ? yamlContent : [yamlContent];
@@ -130,6 +131,17 @@ function extractSPLQuery(yamlContent) {
             for (const platform of platforms) {
                 const config = doc.configurations[platform];
                 if (config && config.query) {
+                    // Calculate the line offset by finding where "query: |" appears
+                    const queryPattern = new RegExp(`${platform}:\\s*\\n\\s*query:\\s*\\|`, 'i');
+                    const match = fullText.match(queryPattern);
+                    if (match) {
+                        // Count newlines up to the end of "query: |" to get the offset
+                        const matchEnd = (match.index || 0) + match[0].length;
+                        const offset = fullText.substring(0, matchEnd).split('\n').length;
+                        connection.console.log(`[Offset] Found query block at line ${offset} for platform ${platform}`);
+                        return { query: config.query, offset };
+                    }
+                    // Fallback: count lines up to query content
                     return { query: config.query, offset: 0 };
                 }
             }
@@ -151,8 +163,8 @@ function extractVariablesFromQuery(query) {
     connection.console.log(`[Variable Extraction] Processing query with ${lines.length} lines`);
     for (const line of lines) {
         const trimmedLine = line.trim();
-        // Skip comments and empty lines
-        if (!trimmedLine || trimmedLine.startsWith('#')) {
+        // Skip comments and empty lines (both YAML # and SPL ``` comments)
+        if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('```')) {
             continue;
         }
         // Extract from eval: eval newfield = expression, field2 = expr2
@@ -245,7 +257,7 @@ async function validateTextDocument(textDocument) {
             // Fall back to single document parsing
             yamlDocs = [yaml.parse(text)];
         }
-        const extracted = extractSPLQuery(yamlDocs);
+        const extracted = extractSPLQuery(yamlDocs, text);
         if (!extracted) {
             // Not a relevant document, skip validation
             connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] });
@@ -253,6 +265,8 @@ async function validateTextDocument(textDocument) {
             return;
         }
         const query = extracted.query;
+        const lineOffset = extracted.offset;
+        connection.console.log(`[Validation] Query starts at line ${lineOffset}`);
         // Extract and cache variables for this document
         const variables = extractVariablesFromQuery(query);
         documentVariables.set(textDocument.uri, variables);
@@ -260,7 +274,8 @@ async function validateTextDocument(textDocument) {
         // Use enhanced validation for each line
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, i, textDocument.uri);
+            // Pass the adjusted line number (query line + offset)
+            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, i + lineOffset, textDocument.uri);
             diagnostics.push(...lineDiagnostics);
         }
     }

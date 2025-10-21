@@ -504,202 +504,834 @@ tail [<N>]
 
 ---
 
-## 4. Function Categories & Signatures
+## 4. Critical Distinction: Commands vs. Evaluation Functions
 
-SPL provides **170+ evaluation functions** across 13 categories:
+### 4.1 Architecture Overview
 
-### 4.1 Comparison & Conditional Functions
+SPL has **TWO distinct syntactic constructs** that must be understood separately:
+
+#### **Search Commands** (after pipe `|`)
+- Used to process, transform, filter, or aggregate events
+- Appear after pipe operators in the search pipeline
+- 158 commands in SPL 10.0 (documented in COMMANDS_INVENTORY.json)
+- Examples: `stats`, `eval`, `where`, `rex`, `sort`, `table`, `rename`
 
 ```spl
-case(<condition>, <value>, ...)
+index=main 
+| stats count BY host          # ← stats is a COMMAND
+| where count > 100             # ← where is a COMMAND  
+| sort -count                   # ← sort is a COMMAND
+```
+
+#### **Evaluation Functions** (within expressions)
+- Used WITHIN certain commands (`eval`, `where`, `fieldformat`, conditional arguments)
+- Perform calculations, transformations, or tests on field values
+- 170+ functions across 13 categories
+- Examples: `if()`, `case()`, `in()`, `match()`, `trim()`, `md5()`, `now()`
+
+```spl
+| eval status_label=case(         # ← case() is a FUNCTION
+    status>=200 AND status<300, "Success",
+    status>=400, "Error"
+  )
+| where in(status, "404", "500")  # ← in() is a FUNCTION
+| eval trimmed=trim(field)         # ← trim() is a FUNCTION
+```
+
+#### **Nested Usage**
+Functions can be nested within each other:
+
+```spl
+| eval result=if(
+    in(status, "404", "500"),     # ← in() FUNCTION inside if() FUNCTION
+    "error", 
+    "ok"
+  )
+| where match(                     # ← match() FUNCTION in where COMMAND
+    upper(field),                  # ← upper() FUNCTION nested in match()
+    "^ERROR"
+  )
+```
+
+### 4.2 SPL Syntax Conventions for Parameters
+
+The official Splunk documentation uses specific syntax to indicate parameter requirements:
+
+| Syntax | Meaning | Example | Valid Calls |
+|--------|---------|---------|-------------|
+| `<param>` | **Required** parameter | `trim(<str>)` | `trim(field)` ✓<br>`trim()` ✗ |
+| `[<param>]` | **Optional** parameter | `trim(<str>, [<trim_chars>])` | `trim(field)` ✓<br>`trim(field, " ")` ✓ |
+| `<param>...` | **Variadic** (1+ values) | `mvappend(<values>...)` | `mvappend(a)` ✓<br>`mvappend(a, b, c)` ✓ |
+| `(<param>, <param>)...` | **Grouped variadic** | `case(<cond>, <val>)...` | `case(x>1, "hi")` ✓<br>`case(x>1, "hi", x>2, "bye")` ✓ |
+
+**Critical Examples:**
+
+```spl
+# in() function - VARIADIC after first 2 params
+Signature: in(<field>, <value1>, <value2>, ...)
+Valid: in(status, "404")                    # 2 params ✓
+Valid: in(status, "404", "500", "503")      # 4 params ✓
+Valid: in(status, "404", "500", "503", "403", "401")  # 6 params ✓
+
+# trim() function - Second param OPTIONAL
+Signature: trim(<str>, [<trim_chars>])
+Valid: trim(field)                           # 1 param ✓
+Valid: trim(field, " ")                      # 2 params ✓
+Invalid: trim()                              # 0 params ✗
+
+# case() function - GROUPED VARIADIC pairs
+Signature: case(<condition>, <value>)...
+Valid: case(x>1, "high")                     # 1 pair ✓
+Valid: case(x>1, "high", x<1, "low")         # 2 pairs ✓
+Valid: case(x>1, "high", x<1, "low", true(), "normal")  # 3 pairs ✓
+
+# mvappend() function - SIMPLE VARIADIC
+Signature: mvappend(<values>...)
+Valid: mvappend(a)                           # 1 param ✓
+Valid: mvappend(a, b)                        # 2 params ✓
+Valid: mvappend(a, b, c, d, e)               # 5 params ✓
+```
+
+### 4.3 Function Database Requirements
+
+For proper validation and autocomplete, each function entry MUST:
+
+1. **Use proper SPL syntax conventions** in signature
+2. **Specify parameter constraints** clearly
+3. **Provide examples** showing valid usage patterns
+
+**Incorrect Format** (current problem):
+```typescript
+{
+    name: 'in',
+    signature: 'in(<field>, <list>)',  // ✗ WRONG - implies exactly 2 params
+    // ...
+}
+```
+
+**Correct Format** (what we need):
+```typescript
+{
+    name: 'in',
+    signature: 'in(<field>, <value1>, <value2>, ...)',  // ✓ CORRECT - shows variadic
+    minParams: 2,        // At least 2 params required
+    maxParams: Infinity, // Unlimited additional values
+    isVariadic: true,
+    // ...
+}
+```
+
+### 4.4 Comparison & Conditional Functions (13 functions)
+
+These functions perform boolean logic, pattern matching, and conditional evaluation:
+
+```spl
+case(<condition>, <value>)...
 if(<predicate>, <true_value>, <false_value>)
 coalesce(<values>...)
 cidrmatch(<cidr>, <ip>)
-in(<field>, <list>)
+in(<field>, <value1>, <value2>, ...)
 like(<str>, <pattern>)
 match(<str>, <regex>)
 null()
 nullif(<field1>, <field2>)
 searchmatch(<search_str>)
-validate(<condition>, <value>, ...)
-true()  false()
+validate(<condition>, <value>)...
+true()
+false()
 ```
 
-### 4.2 Mathematical Functions
+**Detailed Signatures:**
 
-```spl
-abs(<num>)
-ceiling(<num>)  ceil(<num>)
-floor(<num>)
-round(<num>, <precision>)
-sigfig(<num>)
-sqrt(<num>)
-pow(<num>, <exp>)
-exp(<num>)
-ln(<num>)
-log(<num>, <base>)
-pi()
-exact(<expression>)
-sum(<num>, ...)
-```
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `case` | `case(<condition>, <value>)...` | 2 | ∞ | Multiple condition-value pairs, returns first matching value |
+| `if` | `if(<predicate>, <true_value>, <false_value>)` | 3 | 3 | Returns true_value if predicate is true, else false_value |
+| `coalesce` | `coalesce(<values>...)` | 1 | ∞ | Returns first non-null value from arguments |
+| `cidrmatch` | `cidrmatch(<cidr>, <ip>)` | 2 | 2 | Tests if IP address matches CIDR notation |
+| `in` | `in(<field>, <value1>, <value2>, ...)` | 2 | ∞ | Tests if field value matches any of the provided values |
+| `like` | `like(<str>, <pattern>)` | 2 | 2 | SQL-style pattern matching with % and _ wildcards |
+| `match` | `match(<str>, <regex>)` | 2 | 2 | PCRE regex pattern matching, returns boolean |
+| `null` | `null()` | 0 | 0 | Returns NULL value |
+| `nullif` | `nullif(<field1>, <field2>)` | 2 | 2 | Returns NULL if field1 == field2, else field1 |
+| `searchmatch` | `searchmatch(<search_str>)` | 1 | 1 | Tests if event matches search string |
+| `validate` | `validate(<condition>, <value>)...` | 2 | ∞ | Like case(), but NULL if no condition matches |
+| `true` | `true()` | 0 | 0 | Returns boolean true |
+| `false` | `false()` | 0 | 0 | Returns boolean false |
 
-### 4.3 Statistical Eval Functions
+### 4.5 Mathematical Functions (12 functions)
 
-```spl
-avg(<values>...)
-max(<values>...)
-min(<values>...)
-random()
-```
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `abs` | `abs(<num>)` | 1 | 1 | Returns absolute value of number |
+| `ceiling` | `ceiling(<num>)` | 1 | 1 | Rounds up to nearest integer |
+| `ceil` | `ceil(<num>)` | 1 | 1 | Alias for ceiling |
+| `floor` | `floor(<num>)` | 1 | 1 | Rounds down to nearest integer |
+| `round` | `round(<num>, [<precision>])` | 1 | 2 | Rounds to specified decimal places (default 0) |
+| `sigfig` | `sigfig(<num>)` | 1 | 1 | Returns number with significant figures |
+| `sqrt` | `sqrt(<num>)` | 1 | 1 | Returns square root |
+| `pow` | `pow(<num>, <exp>)` | 2 | 2 | Returns num raised to exp power |
+| `exp` | `exp(<num>)` | 1 | 1 | Returns e raised to num power |
+| `ln` | `ln(<num>)` | 1 | 1 | Returns natural logarithm (base e) |
+| `log` | `log(<num>, [<base>])` | 1 | 2 | Returns logarithm (default base 10) |
+| `pi` | `pi()` | 0 | 0 | Returns value of π (3.141592...) |
+| `exact` | `exact(<expression>)` | 1 | 1 | Forces exact arithmetic (no rounding) |
+| `sum` | `sum(<num>...)` | 1 | ∞ | Returns sum of all numeric arguments |
 
-### 4.4 Text Functions
+### 4.6 Statistical Eval Functions (4 functions)
 
-```spl
-len(<str>)
-lower(<str>)
-upper(<str>)
-substr(<str>, <start>, <length>)
-trim(<str>, <trim_chars>)
-ltrim(<str>, <trim_chars>)
-rtrim(<str>, <trim_chars>)
-replace(<str>, <regex>, <replacement>)
-spath(<value>, <path>)
-urldecode(<url>)
-```
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `avg` | `avg(<values>...)` | 1 | ∞ | Returns average of numeric values |
+| `max` | `max(<values>...)` | 1 | ∞ | Returns maximum value |
+| `min` | `min(<values>...)` | 1 | ∞ | Returns minimum value |
+| `random` | `random()` | 0 | 0 | Returns pseudo-random number |
 
-### 4.5 Multivalue Eval Functions
+### 4.7 Text Functions (10 functions)
 
-```spl
-mvappend(<values>...)
-mvcount(<mv>)
-mvdedup(<mv>)
-mvfilter(<predicate>)
-mvfind(<mv>, <regex>)
-mvindex(<mv>, <start>, <end>)
-mvjoin(<mv>, <delim>)
-mvmap(<mv>, <expression>)
-mvrange(<start>, <end>, <step>)
-mvsort(<mv>)
-mvzip(<mv_left>, <mv_right>, <delim>)
-split(<str>, <delim>)
-commands(<value>)
-mv_to_json_array(<field>, <infer_types>)
-```
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `len` | `len(<str>)` | 1 | 1 | Returns length of string |
+| `lower` | `lower(<str>)` | 1 | 1 | Converts string to lowercase |
+| `upper` | `upper(<str>)` | 1 | 1 | Converts string to uppercase |
+| `substr` | `substr(<str>, <start>, [<length>])` | 2 | 3 | Extracts substring (length optional = to end) |
+| `trim` | `trim(<str>, [<trim_chars>])` | 1 | 2 | Removes leading/trailing chars (default whitespace) |
+| `ltrim` | `ltrim(<str>, [<trim_chars>])` | 1 | 2 | Removes leading chars (default whitespace) |
+| `rtrim` | `rtrim(<str>, [<trim_chars>])` | 1 | 2 | Removes trailing chars (default whitespace) |
+| `replace` | `replace(<str>, <regex>, <replacement>)` | 3 | 3 | Replaces regex matches with replacement string |
+| `spath` | `spath(<value>, [<path>])` | 1 | 2 | Extracts value from JSON/XML (path optional) |
+| `urldecode` | `urldecode(<url>)` | 1 | 1 | Decodes URL-encoded string |
 
-### 4.6 JSON Functions
+### 4.8 Multivalue Eval Functions (12 functions)
 
-```spl
-json(<value>)
-json_valid(<json>)
-json_object(<members>)
-json_array(<values>)
-json_keys(<json>)
-json_entries(<value>)
-json_extract(<json>, <paths>)
-json_extract_exact(<json>, <keys>)
-json_set(<json>, <path_value_pairs>)
-json_set_exact(<json>, <key_value_pairs>)
-json_append(<json>, <path_value_pairs>)
-json_extend(<json>, <path_value_pairs>)
-json_delete(<object>, <keys>)
-json_has_key_exact(<object>, <key>)
-json_array_to_mv(<json_array>, <boolean>)
-```
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `mvappend` | `mvappend(<values>...)` | 1 | ∞ | Appends values to create multivalue field |
+| `mvcount` | `mvcount(<mv>)` | 1 | 1 | Returns count of values in multivalue field |
+| `mvdedup` | `mvdedup(<mv>)` | 1 | 1 | Removes duplicate values from multivalue field |
+| `mvfilter` | `mvfilter(<predicate>)` | 1 | 1 | Filters multivalue field based on boolean expression |
+| `mvfind` | `mvfind(<mv>, <regex>)` | 2 | 2 | Returns index of first regex match in multivalue field |
+| `mvindex` | `mvindex(<mv>, <start>, [<end>])` | 2 | 3 | Extracts subset of multivalue field by index range |
+| `mvjoin` | `mvjoin(<mv>, <delim>)` | 2 | 2 | Joins multivalue field into single string with delimiter |
+| `mvmap` | `mvmap(<mv>, <expression>)` | 2 | 2 | Applies expression to each value in multivalue field |
+| `mvrange` | `mvrange(<start>, <end>, [<step>])` | 2 | 3 | Creates multivalue field with numeric range |
+| `mvsort` | `mvsort(<mv>)` | 1 | 1 | Sorts multivalue field |
+| `mvzip` | `mvzip(<mv_left>, <mv_right>, [<delim>])` | 2 | 3 | Combines two multivalue fields with delimiter (default ",") |
+| `split` | `split(<str>, <delim>)` | 2 | 2 | Splits string into multivalue field |
+| `commands` | `commands(<value>)` | 1 | 1 | Extracts command names from search string |
+| `mv_to_json_array` | `mv_to_json_array(<field>, [<infer_types>])` | 1 | 2 | Converts multivalue to JSON array |
 
-### 4.7 Date & Time Functions
+### 4.9 JSON Functions (15 functions)
 
-```spl
-now()
-time()
-strftime(<time>, <format>)
-strptime(<str>, <format>)
-relative_time(<time>, <specifier>)
-```
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `json` | `json(<value>)` | 1 | 1 | Parses JSON string into object |
+| `json_valid` | `json_valid(<json>)` | 1 | 1 | Tests if string is valid JSON |
+| `json_object` | `json_object(<key>, <value>...)` | 2 | ∞ | Creates JSON object from key-value pairs |
+| `json_array` | `json_array(<values>...)` | 0 | ∞ | Creates JSON array from values |
+| `json_keys` | `json_keys(<json>)` | 1 | 1 | Returns keys from JSON object as multivalue |
+| `json_entries` | `json_entries(<value>)` | 1 | 1 | Returns JSON object entries as multivalue |
+| `json_extract` | `json_extract(<json>, <paths>...)` | 2 | ∞ | Extracts values from JSON using path expressions |
+| `json_extract_exact` | `json_extract_exact(<json>, <keys>...)` | 2 | ∞ | Extracts values using exact key names |
+| `json_set` | `json_set(<json>, <path>, <value>...)` | 3 | ∞ | Sets values in JSON using path expressions (pairs) |
+| `json_set_exact` | `json_set_exact(<json>, <key>, <value>...)` | 3 | ∞ | Sets values using exact key names (pairs) |
+| `json_append` | `json_append(<json>, <path>, <value>...)` | 3 | ∞ | Appends values to JSON arrays (pairs) |
+| `json_extend` | `json_extend(<json>, <path>, <value>...)` | 3 | ∞ | Extends JSON objects with new fields (pairs) |
+| `json_delete` | `json_delete(<object>, <keys>...)` | 2 | ∞ | Deletes keys from JSON object |
+| `json_has_key_exact` | `json_has_key_exact(<object>, <key>)` | 2 | 2 | Tests if JSON object has exact key |
+| `json_array_to_mv` | `json_array_to_mv(<json_array>, [<infer_types>])` | 1 | 2 | Converts JSON array to multivalue field |
+
+### 4.10 Date & Time Functions (5 functions)
+
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `now` | `now()` | 0 | 0 | Returns current epoch time |
+| `time` | `time()` | 0 | 0 | Returns current epoch time (alias for now) |
+| `strftime` | `strftime(<time>, <format>)` | 2 | 2 | Formats epoch time as string using format codes |
+| `strptime` | `strptime(<str>, <format>)` | 2 | 2 | Parses time string into epoch time |
+| `relative_time` | `relative_time(<time>, <specifier>)` | 2 | 2 | Adjusts time by relative amount (e.g., "-1h") |
 
 **Time Format Specifiers:**
 ```
-%Y  - Year (4 digit)
-%m  - Month (01-12)
-%d  - Day (01-31)
-%H  - Hour (00-23)
-%M  - Minute (00-59)
-%S  - Second (00-59)
-%s  - Unix timestamp
+%Y  - Year (4 digit)      %m  - Month (01-12)      %d  - Day (01-31)
+%H  - Hour (00-23)        %M  - Minute (00-59)     %S  - Second (00-59)
+%s  - Unix timestamp      %z  - Timezone offset    %Z  - Timezone name
 ```
 
-**Time Modifiers:**
+### 4.11 Cryptographic Functions (4 functions)
+
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `md5` | `md5(<str>)` | 1 | 1 | Returns MD5 hash of string |
+| `sha1` | `sha1(<str>)` | 1 | 1 | Returns SHA1 hash of string |
+| `sha256` | `sha256(<str>)` | 1 | 1 | Returns SHA256 hash of string |
+| `sha512` | `sha512(<str>)` | 1 | 1 | Returns SHA512 hash of string |
+
+### 4.12 Conversion Functions (10 functions)
+
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `tostring` | `tostring(<value>, [<format>])` | 1 | 2 | Converts value to string with optional format |
+| `tonumber` | `tonumber(<str>, [<base>])` | 1 | 2 | Converts string to number (base default 10) |
+| `tobool` | `tobool(<value>)` | 1 | 1 | Converts value to boolean |
+| `toint` | `toint(<value>, [<base>])` | 1 | 2 | Converts value to integer (base default 10) |
+| `todouble` | `todouble(<value>, [<base>])` | 1 | 2 | Converts value to double (base default 10) |
+| `tomv` | `tomv(<value>)` | 1 | 1 | Converts value to multivalue |
+| `toarray` | `toarray(<value>)` | 1 | 1 | Converts value to JSON array |
+| `toobject` | `toobject(<value>)` | 1 | 1 | Converts value to JSON object |
+| `printf` | `printf(<format>, <arguments>...)` | 1 | ∞ | Formats string using printf-style format |
+| `ipmask` | `ipmask(<mask>, <ip>)` | 2 | 2 | Applies netmask to IP address |
+
+### 4.13 Informational Functions (11 functions)
+
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `isstr` | `isstr(<value>)` | 1 | 1 | Tests if value is string type |
+| `isnum` | `isnum(<value>)` | 1 | 1 | Tests if value is numeric type |
+| `isbool` | `isbool(<value>)` | 1 | 1 | Tests if value is boolean type |
+| `isint` | `isint(<value>)` | 1 | 1 | Tests if value is integer type |
+| `isdouble` | `isdouble(<value>)` | 1 | 1 | Tests if value is double/float type |
+| `ismv` | `ismv(<value>)` | 1 | 1 | Tests if value is multivalue field |
+| `isarray` | `isarray(<value>)` | 1 | 1 | Tests if value is JSON array |
+| `isobject` | `isobject(<value>)` | 1 | 1 | Tests if value is JSON object |
+| `isnull` | `isnull(<value>)` | 1 | 1 | Tests if value is null |
+| `isnotnull` | `isnotnull(<value>)` | 1 | 1 | Tests if value is not null |
+| `typeof` | `typeof(<value>)` | 1 | 1 | Returns type name as string |
+
+### 4.14 Bitwise Functions (6 functions)
+
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `bit_and` | `bit_and(<values>...)` | 1 | ∞ | Bitwise AND of all values |
+| `bit_or` | `bit_or(<values>...)` | 1 | ∞ | Bitwise OR of all values |
+| `bit_not` | `bit_not(<value>, <bitmask>)` | 2 | 2 | Bitwise NOT with bitmask |
+| `bit_xor` | `bit_xor(<values>...)` | 1 | ∞ | Bitwise XOR of all values |
+| `bit_shift_left` | `bit_shift_left(<value>, <shift>)` | 2 | 2 | Left bit shift |
+| `bit_shift_right` | `bit_shift_right(<value>, <shift>)` | 2 | 2 | Right bit shift |
+
+### 4.15 Trigonometric & Hyperbolic Functions (15 functions)
+
+| Function | Signature | Min | Max | Description |
+|----------|-----------|-----|-----|-------------|
+| `sin` | `sin(<x>)` | 1 | 1 | Sine of x (radians) |
+| `cos` | `cos(<x>)` | 1 | 1 | Cosine of x (radians) |
+| `tan` | `tan(<x>)` | 1 | 1 | Tangent of x (radians) |
+| `asin` | `asin(<x>)` | 1 | 1 | Arc sine of x |
+| `acos` | `acos(<x>)` | 1 | 1 | Arc cosine of x |
+| `atan` | `atan(<x>)` | 1 | 1 | Arc tangent of x |
+| `atan2` | `atan2(<y>, <x>)` | 2 | 2 | Arc tangent of y/x |
+| `sinh` | `sinh(<x>)` | 1 | 1 | Hyperbolic sine of x |
+| `cosh` | `cosh(<x>)` | 1 | 1 | Hyperbolic cosine of x |
+| `tanh` | `tanh(<x>)` | 1 | 1 | Hyperbolic tangent of x |
+| `asinh` | `asinh(<x>)` | 1 | 1 | Inverse hyperbolic sine |
+| `acosh` | `acosh(<x>)` | 1 | 1 | Inverse hyperbolic cosine |
+| `atanh` | `atanh(<x>)` | 1 | 1 | Inverse hyperbolic tangent |
+| `hypot` | `hypot(<x>, <y>)` | 2 | 2 | Hypotenuse: sqrt(x²+y²) |
+
+---
+
+## 5. Proper Validation, Completion, and Highlighting Architecture
+
+### 5.1 Context Detection Strategy
+
+The LSP must detect **three distinct contexts** to provide correct validation:
+
+#### **Context 1: After Pipe (`|`) - Command Context**
 ```spl
--1h      # 1 hour ago
--7d@d    # 7 days ago, snapped to day start
-@w0      # Week start (Sunday)
-+30m     # 30 minutes from now
+index=main
+| stats count BY host        # ← "stats" is a COMMAND
+| where count > 100           # ← "where" is a COMMAND
+| sort -count                 # ← "sort" is a COMMAND
 ```
 
-### 4.8 Cryptographic Functions
+**Detection Pattern:**
+- Immediately after pipe operator `|`
+- Followed by whitespace
+- Token must match command name from spl-commands-database.ts
 
+**Validation:**
+- Check if command exists in command database (162 commands)
+- Validate command-specific arguments (BY clauses, options, field lists)
+- NO function parameter validation
+
+**Completion:**
+- Suggest commands from spl-commands-database.ts
+- Filter by command type (Streaming, Transforming, etc.)
+- Show command syntax and required arguments
+
+#### **Context 2: Within `eval` Expression - Function Context**
 ```spl
-md5(<str>)
-sha1(<str>)
-sha256(<str>)
-sha512(<str>)
+| eval status_label=case(status>200, "error", status<200, "ok")
+       ^               ^               ^               ^
+       assignment      FUNCTION        comparison      literal
 ```
 
-### 4.9 Conversion Functions
+**Detection Pattern:**
+- Inside `eval <field>=<expression>` statement
+- Token followed immediately by `(`
+- Token must match function name from spl-functions-database.ts
 
+**Validation:**
+- Check if function exists in function database (170+ functions)
+- Count parameters and validate against minParams/maxParams
+- Handle optional parameters `[<param>]`
+- Handle variadic parameters `<param>...`
+- Allow nested function calls
+
+**Completion:**
+- Suggest functions from spl-functions-database.ts
+- Filter by category (Math, Text, Date/Time, etc.)
+- Show function signature with parameter types
+- Provide signature help during parameter entry
+
+#### **Context 3: Within `where` Expression - Function Context**
 ```spl
-tostring(<value>, <format>)
-tonumber(<str>, <base>)
-tobool(<value>)
-toint(<value>, <base>)
-todouble(<value>, <base>)
-tomv(<value>)
-toarray(<value>)
-toobject(<value>)
-printf(<format>, <arguments>)
-ipmask(<mask>, <ip>)
+| where in(status, "404", "500") AND match(uri, "^/api/")
+        ^                                ^
+        FUNCTION                         FUNCTION
 ```
 
-### 4.10 Informational Functions
+**Detection Pattern:**
+- Inside `where <boolean-expression>` statement
+- Token followed immediately by `(`
+- Token must match function name from spl-functions-database.ts
 
-```spl
-isstr(<value>)
-isnum(<value>)
-isbool(<value>)
-isint(<value>)
-isdouble(<value>)
-ismv(<value>)
-isarray(<value>)
-isobject(<value>)
-isnull(<value>)
-isnotnull(<value>)
-typeof(<value>)
+**Validation:**
+- Same as eval context
+- Functions must return boolean or be used in boolean context
+- Allow nested functions and logical operators (AND, OR, NOT)
+
+**Completion:**
+- Same as eval context
+- Prioritize boolean-returning functions (is*, match, in, like, etc.)
+
+### 5.2 Function Signature Parsing Algorithm
+
+The `parseFunctionSignature()` function must understand SPL syntax conventions:
+
+```typescript
+export function parseFunctionSignature(signature: string): {
+    minParams: number;
+    maxParams: number;
+    isVariadic: boolean;
+    paramNames: string[];
+} {
+    // Extract params between parentheses
+    const paramsStr = signature.substring(
+        signature.indexOf('(') + 1, 
+        signature.lastIndexOf(')')
+    );
+    
+    if (!paramsStr.trim()) {
+        return { minParams: 0, maxParams: 0, isVariadic: false, paramNames: [] };
+    }
+    
+    const params = paramsStr.split(',').map(p => p.trim());
+    let minParams = 0;
+    let maxParams = 0;
+    let isVariadic = false;
+    const paramNames: string[] = [];
+    
+    for (const param of params) {
+        paramNames.push(param);
+        
+        // Check for variadic: <param>... or (<param>, <param>)...
+        if (param.includes('...')) {
+            isVariadic = true;
+            maxParams = Infinity;
+            
+            // Count required params before variadic
+            // e.g., "in(<field>, <value1>, <value2>, ...)" has minParams=2
+            // Count params that don't have ... and aren't optional
+            const beforeVariadic = params.slice(0, params.indexOf(param));
+            minParams = beforeVariadic.filter(p => 
+                !p.startsWith('[') && !p.endsWith(']')
+            ).length;
+            
+            // If variadic param itself isn't optional, add 1 to min
+            if (!param.startsWith('[')) {
+                minParams += 1;
+            }
+            break; // No more params after variadic
+        }
+        
+        // Check for optional: [<param>]
+        if (param.startsWith('[') && param.endsWith(']')) {
+            // Optional param increases maxParams but not minParams
+            maxParams++;
+        } else {
+            // Required param increases both
+            minParams++;
+            maxParams++;
+        }
+    }
+    
+    return { minParams, maxParams, isVariadic, paramNames };
+}
 ```
 
-### 4.11 Bitwise Functions
+**Test Cases:**
 
-```spl
-bit_and(<values>...)
-bit_or(<values>...)
-bit_not(<value>, <bitmask>)
-bit_xor(<values>...)
-bit_shift_left(<value>, <shift_offset>)
-bit_shift_right(<value>, <shift_offset>)
+```typescript
+// trim(<str>, [<trim_chars>])
+parseFunctionSignature('trim(<str>, [<trim_chars>])')
+// Returns: { minParams: 1, maxParams: 2, isVariadic: false }
+
+// in(<field>, <value1>, <value2>, ...)
+parseFunctionSignature('in(<field>, <value1>, <value2>, ...)')
+// Returns: { minParams: 2, maxParams: Infinity, isVariadic: true }
+
+// case(<condition>, <value>)...
+parseFunctionSignature('case(<condition>, <value>)...')
+// Returns: { minParams: 2, maxParams: Infinity, isVariadic: true }
+
+// if(<predicate>, <true_value>, <false_value>)
+parseFunctionSignature('if(<predicate>, <true_value>, <false_value>)')
+// Returns: { minParams: 3, maxParams: 3, isVariadic: false }
+
+// round(<num>, [<precision>])
+parseFunctionSignature('round(<num>, [<precision>])')
+// Returns: { minParams: 1, maxParams: 2, isVariadic: false }
+
+// mvappend(<values>...)
+parseFunctionSignature('mvappend(<values>...)')
+// Returns: { minParams: 1, maxParams: Infinity, isVariadic: true }
+
+// now()
+parseFunctionSignature('now()')
+// Returns: { minParams: 0, maxParams: 0, isVariadic: false }
 ```
 
-### 4.12 Trigonometric & Hyperbolic Functions
+### 5.3 Validation Logic Implementation
 
+```typescript
+export function validateFunctionCall(
+    functionName: string,
+    argCount: number,
+    context: 'eval' | 'where' | 'other'
+): Diagnostic[] {
+    const func = getSPLFunction(functionName);
+    
+    if (!func) {
+        return [{
+            severity: DiagnosticSeverity.Error,
+            message: `Unknown SPL function: '${functionName}'`,
+            // ... range info
+        }];
+    }
+    
+    const { minParams, maxParams, isVariadic } = parseFunctionSignature(func.signature);
+    
+    if (argCount < minParams) {
+        return [{
+            severity: DiagnosticSeverity.Error,
+            message: `Function '${functionName}' requires at least ${minParams} parameter${minParams !== 1 ? 's' : ''}, but got ${argCount}`,
+            // ... range info
+        }];
+    }
+    
+    if (argCount > maxParams && !isVariadic) {
+        return [{
+            severity: DiagnosticSeverity.Error,
+            message: `Function '${functionName}' accepts at most ${maxParams} parameter${maxParams !== 1 ? 's' : ''}, but got ${argCount}`,
+            // ... range info
+        }];
+    }
+    
+    return []; // No errors
+}
+
+export function validateCommandUsage(
+    commandName: string,
+    context: 'after-pipe' | 'inline'
+): Diagnostic[] {
+    const cmd = getSPLCommand(commandName);
+    
+    if (!cmd) {
+        return [{
+            severity: DiagnosticSeverity.Error,
+            message: `Unknown SPL command: '${commandName}'`,
+            // ... range info
+        }];
+    }
+    
+    if (context !== 'after-pipe') {
+        return [{
+            severity: DiagnosticSeverity.Warning,
+            message: `Command '${commandName}' should appear after pipe operator '|'`,
+            // ... range info
+        }];
+    }
+    
+    return []; // No errors
+}
+```
+
+### 5.4 Completion Provider Strategy
+
+```typescript
+export function provideCompletions(
+    document: TextDocument,
+    position: Position
+): CompletionItem[] {
+    const context = detectContext(document, position);
+    
+    switch (context.type) {
+        case 'command':
+            // After pipe - suggest commands
+            return getAllCommands().map(cmd => ({
+                label: cmd.name,
+                kind: CompletionItemKind.Function,
+                detail: cmd.category,
+                documentation: {
+                    kind: MarkupKind.Markdown,
+                    value: `**${cmd.name}** (${cmd.type})\n\n${cmd.description}\n\n**Syntax:** \`${cmd.syntax}\``
+                },
+                sortText: `1_${cmd.name}` // Prioritize commands
+            }));
+            
+        case 'eval-expression':
+        case 'where-expression':
+            // Inside eval/where - suggest functions
+            return getAllFunctions().map(func => ({
+                label: func.name,
+                kind: CompletionItemKind.Function,
+                detail: func.category,
+                documentation: {
+                    kind: MarkupKind.Markdown,
+                    value: `**${func.name}** (${func.category})\n\n${func.description}\n\n**Signature:** \`${func.signature}\``
+                },
+                insertText: `${func.name}($1)`,
+                insertTextFormat: InsertTextFormat.Snippet,
+                sortText: `2_${func.name}` // Lower priority than commands in command context
+            }));
+            
+        case 'field-reference':
+            // Field name context - suggest fields from schema
+            return getAvailableFields(document).map(field => ({
+                label: field,
+                kind: CompletionItemKind.Field,
+                sortText: `3_${field}`
+            }));
+            
+        default:
+            return [];
+    }
+}
+
+function detectContext(document: TextDocument, position: Position): {
+    type: 'command' | 'eval-expression' | 'where-expression' | 'field-reference';
+    // ... additional context info
+} {
+    const line = document.getText({
+        start: { line: position.line, character: 0 },
+        end: position
+    });
+    
+    // Check if after pipe
+    if (/\|\s*\w*$/.test(line)) {
+        return { type: 'command' };
+    }
+    
+    // Check if inside eval
+    if (/\|\s*eval\s+\w+=/.test(line) && !line.includes('|', line.lastIndexOf('eval'))) {
+        return { type: 'eval-expression' };
+    }
+    
+    // Check if inside where
+    if (/\|\s*where\s+/.test(line) && !line.includes('|', line.lastIndexOf('where'))) {
+        return { type: 'where-expression' };
+    }
+    
+    return { type: 'field-reference' };
+}
+```
+
+### 5.5 Syntax Highlighting Strategy
+
+The TextMate grammar must distinguish commands from functions:
+
+```json
+{
+  "patterns": [
+    {
+      "comment": "Commands after pipe operator",
+      "match": "(\\|)\\s*(\\w+)\\b",
+      "captures": {
+        "1": { "name": "punctuation.separator.pipe.spl" },
+        "2": { "name": "keyword.control.command.spl" }
+      }
+    },
+    {
+      "comment": "Functions (followed by opening paren)",
+      "match": "\\b(if|case|match|trim|upper|lower|in|coalesce|md5|sha256|now|strftime)\\s*(?=\\()",
+      "name": "support.function.eval.spl"
+    },
+    {
+      "comment": "Function calls with parentheses",
+      "begin": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()",
+      "end": "\\)",
+      "beginCaptures": {
+        "1": { "name": "entity.name.function.spl" },
+        "2": { "name": "punctuation.definition.parameters.begin.spl" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.parameters.end.spl" }
+      },
+      "patterns": [
+        { "include": "#expressions" }
+      ]
+    }
+  ]
+}
+```
+
+### 5.6 Signature Help Provider
+
+```typescript
+export function provideSignatureHelp(
+    document: TextDocument,
+    position: Position
+): SignatureHelp | null {
+    const context = detectFunctionCall(document, position);
+    
+    if (!context) return null;
+    
+    const func = getSPLFunction(context.functionName);
+    if (!func) return null;
+    
+    const signatureInfo: SignatureInformation = {
+        label: func.signature,
+        documentation: {
+            kind: MarkupKind.Markdown,
+            value: func.description
+        },
+        parameters: []
+    };
+    
+    // Parse parameters from signature
+    const { paramNames } = parseFunctionSignature(func.signature);
+    
+    for (const paramName of paramNames) {
+        signatureInfo.parameters.push({
+            label: paramName,
+            documentation: `Parameter: ${paramName}`
+        });
+    }
+    
+    return {
+        signatures: [signatureInfo],
+        activeSignature: 0,
+        activeParameter: context.activeParameter
+    };
+}
+```
+
+### 5.7 Complete Function Database Structure
+
+Each function entry must include:
+
+```typescript
+interface SPLFunction {
+    name: string;                    // Function name (lowercase)
+    category: string;                // Comparison, Math, Text, etc.
+    description: string;             // Full description
+    signature: string;               // PROPER SPL syntax: trim(<str>, [<trim_chars>])
+    returnType: string;              // 'string' | 'number' | 'boolean' | 'any'
+    examples: string[];              // Usage examples
+    relatedFunctions?: string[];     // Similar functions
+}
+```
+
+**Example Entries:**
+
+```typescript
+{
+    name: 'in',
+    category: 'Comparison & Conditional',
+    description: 'Returns TRUE if the value of <field> matches one of the provided values. The list of values is variadic.',
+    signature: 'in(<field>, <value1>, <value2>, ...)',
+    returnType: 'boolean',
+    examples: [
+        'in(status, "404")',
+        'in(status, "404", "500", "503")',
+        'where in(action, "purchase", "add_to_cart", "checkout")'
+    ],
+    relatedFunctions: ['match', 'like', 'case']
+},
+{
+    name: 'trim',
+    category: 'Text',
+    description: 'Removes leading and trailing characters from a string. The <trim_chars> argument is optional and defaults to whitespace.',
+    signature: 'trim(<str>, [<trim_chars>])',
+    returnType: 'string',
+    examples: [
+        'trim(field)',
+        'trim(field, " ")',
+        'trim(field, "0")'
+    ],
+    relatedFunctions: ['ltrim', 'rtrim', 'replace']
+},
+{
+    name: 'case',
+    category: 'Comparison & Conditional',
+    description: 'Takes pairs of conditions and values. Returns the value corresponding to the first condition that evaluates to TRUE.',
+    signature: 'case(<condition>, <value>)...',
+    returnType: 'any',
+    examples: [
+        'case(status==200, "OK", status==404, "Not Found", status==500, "Error")',
+        'case(x>100, "high", x>50, "medium", true(), "low")'
+    ],
+    relatedFunctions: ['if', 'validate', 'coalesce']
+}
+```
+
+### 5.8 Testing Strategy
+
+Create comprehensive test cases covering:
+
+**Function Parameter Validation:**
 ```spl
-sin(<x>)  cos(<x>)  tan(<x>)
-asin(<x>)  acos(<x>)  atan(<x>)
-atan2(<x>, <y>)
-sinh(<x>)  cosh(<x>)  tanh(<x>)
-asinh(<x>)  acosh(<x>)  atanh(<x>)
-hypot(<x>, <y>)
+| eval test1=in(status, "404")                    # ✓ Valid: 2 params (min=2)
+| eval test2=in(status, "404", "500", "503")      # ✓ Valid: 4 params (variadic)
+| eval test3=trim(field)                          # ✓ Valid: 1 param (min=1, max=2)
+| eval test4=trim(field, " ")                     # ✓ Valid: 2 params
+| eval test5=case(x>1, "hi")                      # ✓ Valid: 2 params (grouped variadic)
+| eval test6=case(x>1, "hi", x<1, "lo")           # ✓ Valid: 4 params
+| eval test7=round(value)                         # ✓ Valid: 1 param (min=1, max=2)
+| eval test8=round(value, 2)                      # ✓ Valid: 2 params
+| eval test9=now()                                # ✓ Valid: 0 params (min=0, max=0)
+
+| eval bad1=in(status)                            # ✗ Error: requires at least 2 params
+| eval bad2=trim()                                # ✗ Error: requires at least 1 param
+| eval bad3=round(value, 2, 3)                    # ✗ Error: accepts at most 2 params
+| eval bad4=now(123)                              # ✗ Error: accepts 0 params
+```
+
+**Command vs Function Distinction:**
+```spl
+| stats count BY host                             # ✓ Valid: stats is command after |
+| where in(status, "404")                         # ✓ Valid: in() is function in where
+| eval result=if(x>1, "yes", "no")                # ✓ Valid: if() is function in eval
+
+in(status, "404")                                 # ✗ Error: function without eval/where context
+stats count BY host                               # ✗ Warning: command not after pipe
+```
+
+**Nested Functions:**
+```spl
+| eval result=if(in(status, "404", "500"), "error", "ok")
+                  ^                          ^
+                  FUNCTION                   FUNCTION
+                  
+| where match(upper(field), "^ERROR")
+             ^                  ^
+             FUNCTION            FUNCTION
 ```
 
 ---
 
-## 5. Statistical & Chart Functions
+## 6. Command Syntax Patterns
 
 These functions are used with `stats`, `chart`, `timechart`, `eventstats`, `streamstats`:
 

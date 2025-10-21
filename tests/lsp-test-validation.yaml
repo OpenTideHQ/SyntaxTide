@@ -12,104 +12,93 @@ tags:
 configurations:
   splunk:
     query: |
-      # Test 1: Valid commands with correct arguments
+      ```Test 1: Valid commands with correct arguments```
       index=main sourcetype=access_combined
       | stats count by status, clientip
       | eval score=if(count > 100, "high", "low")
       
-      # Test 2: Command with missing required arguments
-      # This should show an error - accum requires a field argument
-      # | accum
+      ```Test 2: Command with missing required arguments```
+      ```This should show an error - accum requires a field argument```
+      ```| accum```
       
-      # Test 3: Command with correct required argument
+      ```Test 3: Command with correct required argument```
       | accum count AS total_count
       
-      # Test 4: Function with incorrect parameter count
-      # if() requires exactly 3 parameters
-      # | eval result=if(status==200)  # ERROR: too few params
-      | eval result=if(status==200, "ok", "fail")  # CORRECT
+      ```Test 4: Function with incorrect parameter count```
+      ```if() requires exactly 3 parameters```
+      ```| eval result=if(status==200)  ERROR: too few params```
+      | eval result=if(status==200, "ok", "fail")  ```CORRECT```
       
-      # Test 5: Function with too many parameters
-      # round() accepts 1 or 2 parameters
-      # | eval rounded=round(value, 2, 3)  # ERROR: too many params
-      | eval rounded=round(value, 2)  # CORRECT
+      ```Test 5: Function with too many parameters```
+      ```round() accepts 1 or 2 parameters```
+      ```| eval rounded=round(value, 2, 3)  ERROR: too many params```
+      | eval rounded=round(value, 2)  ```CORRECT```
       
-      # Test 6: Variadic function (coalesce accepts any number of args)
+      ```Test 6: Variadic function (coalesce accepts any number of args)```
       | eval first_valid=coalesce(field1, field2, field3, "default")
       
-      # Test 7: Command with invalid argument type
-      # maxlines should be a number
-      # | abstract maxlines="not_a_number"  # ERROR: invalid type
-      | abstract maxlines=10  # CORRECT
+      ```Test 7: Command with invalid argument type```
+      ```maxlines should be a number```
+      ```| abstract maxlines="not_a_number"  ERROR: invalid type```
+      | abstract maxlines=10  ```CORRECT```
       
-      # Test 8: Command with unknown argument
-      # | stats count by host invalidarg=something  # WARNING: unknown arg
+      ```Test 8: Command with unknown argument```
+      ```| stats count by host invalidarg=something  WARNING: unknown arg```
       
-      # Test 9: Multiple functions in one eval
+      ```Test 9: Multiple functions in one eval```
       | eval length=len(message), hash=md5(clientip), time=now()
       
-      # Test 10: Nested function calls
+      ```Test 10: Nested function calls```
       | eval formatted=upper(substr(field, 0, len(field)))
       
-      # Test 11: String functions with correct parameters
+      ```Test 11: String functions with correct parameters```
       | eval trimmed=trim(message)
       | eval substring=substr(text, 0, 10)
       | eval replaced=replace(field, "old", "new")
       
-      # Test 12: Math functions
+      ```Test 12: Math functions```
       | eval absolute=abs(value)
       | eval ceiling=ceil(price)
       | eval floored=floor(amount)
       | eval powered=pow(base, exponent)
       
-      # Test 13: Comparison functions
+      ```Test 13: Comparison functions```
       | eval matched=match(url, "^/api/")
       | eval liked=like(server, "prod-%")
       | eval in_list=in(status, "200", "201", "204")
       
-      # Test 14: Date/time functions
+      ```Test 14: Date/time functions```
       | eval current=now()
       | eval formatted_time=strftime(_time, "%Y-%m-%d %H:%M:%S")
       | eval relative=relative_time(now(), "-1d@d")
       
-      # Test 15: Statistical functions with correct usage
+      ```Test 15: Statistical functions with correct usage```
       | stats avg(bytes) AS avg_bytes, max(duration) AS max_duration by status
       | eventstats count AS event_count by host
       | streamstats avg(response_time) AS rolling_avg window=10
       
-      # Test 16: Commands with multiple arguments
+      ```Test 16: Commands with multiple arguments```
       | rename clientip AS "Client IP", status AS "HTTP Status", bytes AS "Bytes Transferred"
       | fields clientip, status, bytes, duration
       | sort -bytes, +duration
       
-      # Test 17: Boolean argument validation
+      ```Test 17: Boolean argument validation```
       | addtotals row=true col=false labelfield=Total
       | dedup clientip keepempty=true
       
-      # Test 18: Multivalue functions
+      ```Test 18: Multivalue functions```
       | eval combined=mvappend(field1, field2, field3)
       | eval count_mv=mvcount(emails)
       | eval joined=mvjoin(tags, ",")
       | eval expanded=mvexpand(multifield)
       
-      # Test 19: JSON functions
+      ```Test 19: JSON functions```
       | eval obj=json_object("key", value)
       | eval arr=json_array(1, 2, 3)
       | spath output=extracted_field path=data.nested.value
       
-      # Test 20: Type conversion functions
+      ```Test 20: Type conversion functions```
       | eval str=tostring(number_field)
       | eval num=tonumber(string_field)
       | eval bool=tobool(flag_field)
       
-  # Test 21: Invalid commands should show errors
-  splunk_enterprise_security:
-    query: |
-      index=security
-      # | invalidcommand field  # ERROR: unknown command
-      | stats count by src_ip
-      # | typo_stats count  # ERROR: unknown command
-      | eval test_field=len(message)
-      
----
-# End of validation test file

@@ -125,8 +125,9 @@ documents.onDidChangeContent(change => {
 /**
  * Extract SPL query from YAML configuration block
  * Handles both single and multi-document YAML files
+ * Returns the query text and the line offset where it starts in the file
  */
-function extractSPLQuery(yamlContent: any): { query: string; offset: number } | null {
+function extractSPLQuery(yamlContent: any, fullText: string): { query: string; offset: number } | null {
 	try {
 		// Handle array of documents (from parseAllDocuments)
 		const documents = Array.isArray(yamlContent) ? yamlContent : [yamlContent];
@@ -142,6 +143,19 @@ function extractSPLQuery(yamlContent: any): { query: string; offset: number } | 
 			for (const platform of platforms) {
 				const config = doc.configurations[platform];
 				if (config && config.query) {
+					// Calculate the line offset by finding where "query: |" appears
+					const queryPattern = new RegExp(`${platform}:\\s*\\n\\s*query:\\s*\\|`, 'i');
+					const match = fullText.match(queryPattern);
+					
+					if (match) {
+						// Count newlines up to the end of "query: |" to get the offset
+						const matchEnd = (match.index || 0) + match[0].length;
+						const offset = fullText.substring(0, matchEnd).split('\n').length;
+						connection.console.log(`[Offset] Found query block at line ${offset} for platform ${platform}`);
+						return { query: config.query, offset };
+					}
+					
+					// Fallback: count lines up to query content
 					return { query: config.query, offset: 0 };
 				}
 			}
@@ -166,8 +180,8 @@ function extractVariablesFromQuery(query: string): Set<string> {
 	for (const line of lines) {
 		const trimmedLine = line.trim();
 		
-		// Skip comments and empty lines
-		if (!trimmedLine || trimmedLine.startsWith('#')) {
+		// Skip comments and empty lines (both YAML # and SPL ``` comments)
+		if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('```')) {
 			continue;
 		}
 		
@@ -269,7 +283,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 			yamlDocs = [yaml.parse(text)];
 		}
 		
-		const extracted = extractSPLQuery(yamlDocs);
+		const extracted = extractSPLQuery(yamlDocs, text);
 		
 		if (!extracted) {
 			// Not a relevant document, skip validation
@@ -279,6 +293,8 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 		}
 
 		const query = extracted.query;
+		const lineOffset = extracted.offset;
+		connection.console.log(`[Validation] Query starts at line ${lineOffset}`);
 		
 		// Extract and cache variables for this document
 		const variables = extractVariablesFromQuery(query);
@@ -289,7 +305,8 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 		// Use enhanced validation for each line
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
-			const lineDiagnostics = validateSPLLine(line, i, textDocument.uri);
+			// Pass the adjusted line number (query line + offset)
+			const lineDiagnostics = validateSPLLine(line, i + lineOffset, textDocument.uri);
 			diagnostics.push(...lineDiagnostics);
 		}
 	} catch (error) {

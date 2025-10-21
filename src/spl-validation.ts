@@ -16,10 +16,17 @@ export interface ValidationContext {
 
 /**
  * Parse function signature to extract parameter information
+ * Handles SPL syntax conventions:
+ *   <param> = required parameter
+ *   [<param>] = optional parameter
+ *   <param>... = variadic parameter (1+ occurrences)
+ *   (<param>, <param>)... = grouped variadic pairs
+ * 
  * Examples:
- *   "if(<predicate>, <true_value>, <false_value>)" -> 3 required params
- *   "round(<num>, <precision>)" -> 2 required params
- *   "coalesce(<values>...)" -> variable args
+ *   "if(<predicate>, <true_value>, <false_value>)" -> min: 3, max: 3
+ *   "trim(<str>, [<trim_chars>])" -> min: 1, max: 2
+ *   "in(<field>, <value1>, <value2>, ...)" -> min: 2, max: Infinity (variadic)
+ *   "case(<condition>, <value>)..." -> min: 2, max: Infinity (grouped variadic)
  */
 function parseFunctionSignature(signature: string): {
 	minParams: number;
@@ -37,15 +44,15 @@ function parseFunctionSignature(signature: string): {
 		return { minParams: 0, maxParams: 0, isVariadic: false, paramNames: [] };
 	}
 
-	// Split by commas, but handle nested parentheses
+	// Split by commas, but handle nested brackets and angle brackets
 	const params: string[] = [];
 	let depth = 0;
 	let currentParam = '';
 	
 	for (let i = 0; i < paramsStr.length; i++) {
 		const char = paramsStr[i];
-		if (char === '(' || char === '<') depth++;
-		else if (char === ')' || char === '>') depth--;
+		if (char === '(' || char === '<' || char === '[') depth++;
+		else if (char === ')' || char === '>' || char === ']') depth--;
 		else if (char === ',' && depth === 0) {
 			params.push(currentParam.trim());
 			currentParam = '';
@@ -57,21 +64,56 @@ function parseFunctionSignature(signature: string): {
 		params.push(currentParam.trim());
 	}
 
-	// Check for variadic (e.g., "<values>...")
-	const isVariadic = params.some(p => p.includes('...'));
-	const paramNames = params.map(p => {
-		// Extract parameter name from <name> or just name
-		const match = p.match(/<([^>]+)>/);
-		return match ? match[1] : p.replace('...', '');
-	});
+	let minParams = 0;
+	let maxParams = 0;
+	let isVariadic = false;
+	const paramNames: string[] = [];
 
-	// Count required vs optional parameters
-	// Optional parameters are typically in square brackets [param]
-	const requiredParams = params.filter(p => !p.startsWith('[') && !p.includes('...')).length;
-	
+	for (let i = 0; i < params.length; i++) {
+		const param = params[i];
+		paramNames.push(param);
+
+		// Check for variadic: <param>... or (<param>, <param>)...
+		if (param.includes('...')) {
+			isVariadic = true;
+			maxParams = Infinity;
+			
+			// For grouped variadic like (<condition>, <value>)...
+			// Count the parameters in the group
+			if (param.startsWith('(') && param.endsWith(')...')) {
+				const groupContent = param.slice(1, param.indexOf(')'));
+				const groupParams = groupContent.split(',').length;
+				minParams = groupParams; // At least one group required
+			} else {
+				// For simple variadic like <value1>, <value2>, ...
+				// Count required params before the variadic marker
+				const beforeVariadic = params.slice(0, i);
+				minParams = beforeVariadic.filter(p => 
+					!p.startsWith('[') && !p.endsWith(']')
+				).length;
+				
+				// If the variadic param itself isn't optional, add 1
+				if (!param.startsWith('[')) {
+					minParams += 1;
+				}
+			}
+			break; // No more params after variadic
+		}
+		
+		// Check for optional: [<param>]
+		if (param.startsWith('[') && param.endsWith(']')) {
+			// Optional param increases maxParams but not minParams
+			maxParams++;
+		} else {
+			// Required param increases both
+			minParams++;
+			maxParams++;
+		}
+	}
+
 	return {
-		minParams: isVariadic ? Math.max(0, requiredParams - 1) : requiredParams,
-		maxParams: isVariadic ? 999 : params.length,
+		minParams,
+		maxParams,
 		isVariadic,
 		paramNames
 	};
@@ -349,7 +391,7 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 	
 	// Skip empty lines and comments
 	const trimmed = line.trim();
-	if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) {
+	if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//') || trimmed.startsWith('```')) {
 		return diagnostics;
 	}
 	
