@@ -3,9 +3,11 @@
 ## ✅ Compilation Successful!
 
 Your comprehensive SPL Language Server has been successfully compiled with:
-- **64 SPL commands** in the database (with 41 fully documented)
+- **160+ SPL commands** in the database with full metadata
+- **158 commands** with enhanced argument validation
 - **95+ SPL functions** across 13 categories
-- Full LSP features: autocomplete, hover, validation, and signature help
+- Full LSP features: autocomplete, hover, validation, signature help
+- **Advanced validation**: command argument checking, function parameter counting
 
 ## 📝 How to Test
 
@@ -14,9 +16,10 @@ Your comprehensive SPL Language Server has been successfully compiled with:
    - Type: "Developer: Reload Window"
    - Press Enter
 
-### 2. **Open Test File**
-   - Open: `tests/lsp-test.yaml`
-   - This file contains comprehensive tests for all LSP features
+### 2. **Open Test Files**
+   - Basic LSP: `tests/lsp-test.yaml` - 11 focused test scenarios
+   - Validation: `tests/lsp-test-validation.yaml` - 21 validation test scenarios
+   - Variables: `tests/lsp-test-variables.yaml` - Variable tracking tests
 
 ### 3. **Test Autocomplete** 🔮
 
@@ -40,20 +43,26 @@ Your comprehensive SPL Language Server has been successfully compiled with:
 
 ### 4. **Test Hover Information** 💡
 
-#### Hover over Commands:
-1. Hover your mouse over the word `stats` on line 18
+#### Hover over Commands (Enhanced):
+1. Hover your mouse over the word `abstract` on line 57 of lsp-test-validation.yaml
 2. **Expected:** Rich documentation popup showing:
    ```
-   stats (Transforming)
+   abstract (Unknown)
    
-   Calculates aggregate statistics over the dataset...
+   Produces an abstract, a summary or brief representation...
    
    Syntax:
-   stats <stats-agg-term>... [BY <field-list>]
+   abstract [maxterms=<int>] [maxlines=<int>]
+   
+   Optional Arguments:
+   - maxterms (number): The maximum number of terms to match. [default: 1000]
+   - maxlines (number): The maximum number of lines to match. [default: 10]
+   
+   Category: Data Manipulation
    
    Examples:
-   ... | stats count by status
-   ... | stats avg(bytes) as average_bytes
+   ... | abstract maxlines=5
+   ... | abstract maxterms=20
    ```
 
 #### Hover over Functions:
@@ -81,20 +90,41 @@ Your comprehensive SPL Language Server has been successfully compiled with:
    - `substr(` - Shows: `substr(<str>, <start>, <length>)`
    - `strftime(` - Shows: `strftime(<time>, <format>)`
 
-### 6. **Test Error Detection** 🚨
+### 6. **Test Advanced Validation** 🚨 NEW!
 
-#### Test Unknown Commands:
-1. Scroll to line 73 in the test file
-2. Uncomment: `# | unknowncommand field`
-3. **Expected:** Red squiggly underline with error:
-   - "Unknown SPL command: 'unknowncommand'. Check command spelling..."
+#### Test Missing Required Arguments:
+1. Open: `tests/lsp-test-validation.yaml`
+2. Go to line 23 (commented out)
+3. Uncomment: `# | accum`
+4. **Expected:** Red squiggly underline with error:
+   - "Command 'accum' requires 1 argument: field"
+5. **Fix it:** Add a field name: `| accum count`
+6. **Expected:** Error disappears
 
-#### Currently Showing Errors:
-The test file intentionally uses some commands we haven't added yet:
-- Line 61: `table` - Not yet in database
-- Line 66: `fillnull` - Not yet in database
+#### Test Function Parameter Count:
+1. Go to line 29 (commented out)
+2. Uncomment: `# | eval result=if(status==200)`
+3. **Expected:** Error appears:
+   - "Function 'if()' requires at least 3 parameters, but got 1"
+4. **Fix it:** Complete the function: `| eval result=if(status==200, "ok", "fail")`
+5. **Expected:** Error disappears
 
-These errors validate that the LSP is working correctly!
+#### Test Invalid Argument Types:
+1. Go to line 49 (commented out)
+2. Uncomment: `# | abstract maxlines="not_a_number"`
+3. **Expected:** Error appears:
+   - "Argument 'maxlines' expects a number, but got 'not_a_number'"
+4. **Fix it:** Use a number: `| abstract maxlines=10`
+5. **Expected:** Error disappears
+
+#### Test Unknown Arguments:
+1. Type: `| stats count by host invalidarg=something`
+2. **Expected:** Warning appears:
+   - "Unknown argument 'invalidarg' for command 'stats'"
+
+#### Test Variadic Functions:
+1. Type: `| eval result=coalesce(field1, field2, field3, field4, "default")`
+2. **Expected:** No errors (coalesce accepts variable arguments)
 
 ### 7. **Test Complete Workflow** 🎯
 
