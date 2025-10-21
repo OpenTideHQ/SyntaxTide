@@ -294,8 +294,11 @@ async function validateTextDocument(textDocument) {
                     availableVariables.add(varName);
                 }
             }
+            const adjustedLineNum = lineNum + lineOffset;
+            connection.console.log(`[Line Calc] Query lineNum: ${lineNum}, lineOffset: ${lineOffset}, adjusted: ${adjustedLineNum}, charOffset: ${charOffset}`);
             // Pass the adjusted line number (query line + offset), character offset, and available variables
-            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, lineNum + lineOffset, textDocument.uri, charOffset, availableVariables);
+            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, adjustedLineNum, textDocument.uri, charOffset, availableVariables, (msg) => connection.console.log(msg) // Pass logger function
+            );
             diagnostics.push(...lineDiagnostics);
         }
     }

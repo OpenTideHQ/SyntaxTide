@@ -792,34 +792,92 @@ export function normalizeSPLQuery(lines: string[]): Array<{
 }
 
 /**
- * Validate command parameters using the new parameter parser
+ * Validate command parameters using parameter parser (NEW approach)
  */
 function validateCommandParametersNew(
 	commandName: string,
 	commandLine: string,
 	context: ValidationContext,
-	commandStartPos?: number
+	commandStartPos: number,
+	logger?: (message: string) => void
 ): Diagnostic[] {
 	const diagnostics: Diagnostic[] = [];
 	
+	if (logger) {
+		logger(`validateCommandParametersNew called for: ${commandName}`);
+		logger(`  commandLine: "${commandLine}"`);
+		logger(`  context.line: "${context.line}"`);
+		logger(`  context.line.length: ${context.line.length}`);
+		logger(`  First 50 chars of context.line: "${context.line.substring(0, 50)}"`);
+		logger(`  context.lineNumber: ${context.lineNumber}`);
+		logger(`  context.charOffset: ${context.charOffset}`);
+		logger(`  commandStartPos: ${commandStartPos}`);
+	}
+	
 	const cmd = getSPLCommand(commandName);
+	
+	if (logger) {
+		logger(`  cmd found: ${!!cmd}`);
+		logger(`  cmd.parameters exists: ${!!(cmd && cmd.parameters)}`);
+		logger(`  cmd.parameters.length: ${cmd?.parameters?.length || 0}`);
+	}
+	
 	if (!cmd || !cmd.parameters || cmd.parameters.length === 0) {
+		if (logger) logger(`  No parameters defined, exiting`);
 		return diagnostics; // No parameters to validate
 	}
 	
 	// Use parameter parser to validate
 	const result = validateCommandParameters(commandName, commandLine, cmd.parameters);
 	
+	if (logger) {
+		logger(`  Parse result - missing: ${result.missingRequired.length}, unknown: ${result.unknown.length}`);
+	}
+	
 	const charOffset = context.charOffset || 0;
-	const commandPos = commandStartPos !== undefined ? commandStartPos : 0;
+	
+	// Find where commandLine appears in the original line to get the proper offset
+	// Important: context.line is the SPL query line (after YAML parsing)
+	// commandLine is the full command string (e.g., "abstract unknownparam=123")
+	// We need to find its position in context.line
+	let baseOffset = 0;
+	const commandLineStart = context.line.indexOf(commandLine);
+	
+	if (logger) {
+		logger(`  commandLineStart (indexOf): ${commandLineStart}`);
+	}
+	
+	if (commandLineStart >= 0) {
+		// Found the command in the line
+		baseOffset = commandLineStart;
+		if (logger) logger(`  Using direct indexOf, baseOffset: ${baseOffset}`);
+	} else {
+		// Fallback: try to find by searching for the command name
+		// This handles cases where commandLine might have extra whitespace
+		const cmdPos = context.line.indexOf(commandName);
+		if (cmdPos >= 0) {
+			// Find the position right after the pipe
+			const pipePos = context.line.lastIndexOf('|', cmdPos);
+			if (pipePos >= 0) {
+				// Position is after the pipe and any whitespace
+				const afterPipe = context.line.substring(pipePos + 1);
+				const trimStart = afterPipe.length - afterPipe.trimStart().length;
+				baseOffset = pipePos + 1 + trimStart;
+				if (logger) logger(`  Using pipe calculation, baseOffset: ${baseOffset}`);
+			} else {
+				baseOffset = cmdPos;
+				if (logger) logger(`  Using cmdPos, baseOffset: ${baseOffset}`);
+			}
+		}
+	}
 	
 	// Report missing required parameters
 	for (const missingParam of result.missingRequired) {
 		diagnostics.push({
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: context.lineNumber, character: commandPos + charOffset },
-				end: { line: context.lineNumber, character: commandPos + commandName.length + charOffset }
+				start: { line: context.lineNumber, character: baseOffset + charOffset },
+				end: { line: context.lineNumber, character: baseOffset + commandName.length + charOffset }
 			},
 			message: `Missing required parameter '${missingParam.name}': ${missingParam.description}`,
 			source: 'spl-validation'
@@ -831,22 +889,59 @@ function validateCommandParametersNew(
 		// Only report as warning if it's a named parameter (key=value)
 		// Don't warn about positional/field parameters (could be user fields)
 		if (unknownParam.type === 'named') {
-			diagnostics.push({
+			// Calculate position: baseOffset is where commandLine starts in context.line
+			// unknownParam.startPos is relative to commandLine
+			// charOffset is YAML indentation to add back
+			const startChar = baseOffset + unknownParam.startPos + charOffset;
+			const endChar = baseOffset + unknownParam.endPos + charOffset;
+			
+			if (logger) {
+				logger(`  Unknown param '${unknownParam.name}' (${unknownParam.type})`);
+				logger(`    context.line: "${context.line}"`);
+				logger(`    commandLine passed to parser: "${commandLine}"`);
+				logger(`    Raw positions - unknownParam.startPos: ${unknownParam.startPos}, endPos: ${unknownParam.endPos}`);
+				logger(`    baseOffset: ${baseOffset}, charOffset: ${charOffset}`);
+				logger(`    Calculation: ${baseOffset} + ${unknownParam.startPos} + ${charOffset} = ${startChar}`);
+				logger(`    Final range: ${startChar}-${endChar}`);
+				logger(`    Line number for diagnostic: ${context.lineNumber}`);
+			}
+			
+			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Warning,
 				range: {
-					start: { line: context.lineNumber, character: unknownParam.startPos + charOffset },
-					end: { line: context.lineNumber, character: unknownParam.endPos + charOffset }
+					start: { line: context.lineNumber, character: startChar },
+					end: { line: context.lineNumber, character: endChar }
 				},
 				message: `Unknown parameter '${unknownParam.name}' for command '${commandName}'. Check command documentation.`,
 				source: 'spl-validation'
-			});
+			};
+			
+			if (logger) {
+				logger(`    Created diagnostic object: line=${diagnostic.range.start.line}, start=${diagnostic.range.start.character}, end=${diagnostic.range.end.character}`);
+			}
+			
+			diagnostics.push(diagnostic);
+		}
+	}
+	
+	if (logger && diagnostics.length > 0) {
+		logger(`  Returning ${diagnostics.length} diagnostic(s) for parameter validation`);
+		for (const diag of diagnostics) {
+			logger(`    - Line ${diag.range.start.line}, chars ${diag.range.start.character}-${diag.range.end.character}: ${diag.message}`);
 		}
 	}
 	
 	return diagnostics;
 }
 
-export function validateSPLLine(line: string, lineNumber: number, documentUri: string, charOffset: number = 0, availableVariables?: Set<string>): Diagnostic[] {
+export function validateSPLLine(
+	line: string, 
+	lineNumber: number, 
+	documentUri: string, 
+	charOffset: number = 0, 
+	availableVariables?: Set<string>,
+	logger?: (message: string) => void
+): Diagnostic[] {
 	const diagnostics: Diagnostic[] = [];
 	const context: ValidationContext = { line, lineNumber, documentUri, charOffset, availableVariables };
 	
@@ -920,7 +1015,7 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 			// NEW: Also validate with parameter parser if parameters are defined
 			const cmd = getSPLCommand(commandName);
 			if (cmd && cmd.parameters && cmd.parameters.length > 0) {
-				const paramDiags = validateCommandParametersNew(commandName, commandPart, context, commandStart);
+				const paramDiags = validateCommandParametersNew(commandName, commandPart, context, commandStart, logger);
 				diagnostics.push(...paramDiags);
 			}
 			// If not in enhanced database, command is valid but we skip detailed validation

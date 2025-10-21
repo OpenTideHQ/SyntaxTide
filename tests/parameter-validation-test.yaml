@@ -47,13 +47,18 @@ configurations:
       | analyzefields classfield=is_activated
       
       # Test 12: analyzefields missing required parameter (should error)
-      | analyzefields
-      
+      | analyzefields bullshit_value=
+      | abstract other_bullshit=
+      | abstract maxlines=10 whatever=
+      | abstract unknowncparameter=
+
       # Test 13: anomalies with multiple optional parameters
-      | anomalies threshold=0.03 field=message by source
-      
+      | anomalies threshold=0.03 blabla=1 field=message by source
+      | anomalies something=1
+      | abstract whatever=
+
       # Test 14: arules with required field list
-      | arules user action status
+      | arules conf=
       
       # Test 15: arules with options
       | arules sup=5 conf=0.7 field1 field2 field3

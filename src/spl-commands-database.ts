@@ -108,6 +108,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'anomalies [threshold=<num>] [labelonly=<bool>] [normalize=<bool>] [maxvalues=<num>] [field=<field>] [denylist=<filename>] [denylistthreshold=<num>] [by-clause]',
 		requiredArgs: 0,
 		optionalArgs: 7,
+		parameters: PARAMS.ANOMALIES_PARAMS,
 		examples: ['... | anomalies', '... | anomalies threshold=0.03 by source', '... | anomalies denylist=boringevents | sort -unexpectedness'],
 		relatedCommands: ['anomalousvalue', 'cluster', 'kmeans', 'outlier']
 	},
@@ -119,6 +120,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'anomalousvalue <av-options>... [action] [pthresh] [field-list]',
 		requiredArgs: 0,
 		optionalArgs: 6,
+		parameters: PARAMS.ANOMALOUSVALUE_PARAMS,
 		examples: ['... | anomalousvalue', '... | anomalousvalue action=filter pthresh=0.02', '... | anomalousvalue action=summary pthresh=0.02 | search isNum=YES'],
 		relatedCommands: ['analyzefields', 'anomalies', 'cluster', 'kmeans', 'outlier']
 	},
@@ -130,6 +132,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'anomalydetection [<method-option>] [<action-option>] [<pthresh-option>] [<cutoff-option>] [<field-list>]',
 		requiredArgs: 0,
 		optionalArgs: 4,
+		parameters: PARAMS.ANOMALYDETECTION_PARAMS,
 		examples: ['... | anomalydetection', '... | anomalydetection method=zscore action=filter pthresh=0.05', '... | anomalydetection method=iqr action=tf param=4 uselower=true mark=true'],
 		relatedCommands: ['analyzefields', 'anomalies', 'anomalousvalue', 'cluster', 'kmeans', 'outlier']
 	},
@@ -141,6 +144,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'append [<subsearch-options>...] <subsearch>',
 		requiredArgs: 1,
 		optionalArgs: 3,
+		parameters: PARAMS.APPEND_PARAMS,
 		examples: ['... | append [search index=other]', '... | append maxtime=30 maxout=1000 [search index=other]'],
 		relatedCommands: ['appendcols', 'appendpipe', 'join', 'set']
 	},
@@ -152,6 +156,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'appendcols [override=<bool> | <subsearch-options>...] <subsearch>',
 		requiredArgs: 1,
 		optionalArgs: 4,
+		parameters: PARAMS.APPENDCOLS_PARAMS,
 		examples: ['... | table host | appendcols [search 404]', '... | appendcols override=true [search ...]'],
 		relatedCommands: ['append', 'appendpipe', 'join', 'set']
 	},
@@ -163,6 +168,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'appendpipe [run_in_preview=<bool>] [<subpipeline>]',
 		requiredArgs: 0,
 		optionalArgs: 2,
+		parameters: PARAMS.APPENDPIPE_PARAMS,
 		examples: ['... | appendpipe [stats sum(count) as count by action | eval user = "TOTAL - ALL USERS"] | sort action'],
 		relatedCommands: ['append', 'appendcols', 'join', 'set']
 	},
@@ -174,6 +180,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'arules [<arules-option>...] <field-list>...',
 		requiredArgs: 1,
 		optionalArgs: 2,
+		parameters: PARAMS.ARULES_PARAMS,
 		examples: ['... | arules field1 field2 field3', '... | arules sup=3 conf=.6 field1 field2 field3'],
 		relatedCommands: ['associate', 'correlate']
 	},
@@ -185,6 +192,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'associate [<associate-options>...] [field-list]',
 		requiredArgs: 0,
 		optionalArgs: 3,
+		parameters: PARAMS.ASSOCIATE_PARAMS,
 		examples: ['... | associate supcnt=3', '... | associate supcnt=50 supfreq=0.2 improv=0.5'],
 		relatedCommands: ['arules', 'correlate', 'contingency']
 	},
@@ -196,6 +204,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'autoregress <field> [AS <newfield>] [p=<int> | p=<int>-<int>]',
 		requiredArgs: 1,
 		optionalArgs: 2,
+		parameters: PARAMS.AUTOREGRESS_PARAMS,
 		examples: ['... | autoregress ip AS old_ip p=3', '... | autoregress count p=2-5', '... | eval rawlen=len(_raw) | autoregress rawlen p=1-4 | eval moving_average=(rawlen + rawlen_p1 + rawlen_p2 + rawlen_p3 +rawlen_p4) /5'],
 		relatedCommands: ['accum', 'delta', 'streamstats', 'trendline']
 	},
@@ -218,6 +227,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'bin [<bin-options>...] <field> [AS <newfield>]',
 		requiredArgs: 1,
 		optionalArgs: 6,
+		parameters: PARAMS.BIN_PARAMS,
 		examples: ['... | bin _time span=5m | stats avg(thruput) by _time host', '... | bin size bins=10 | stats count(_raw) by size', '... | bin amount end=1000'],
 		relatedCommands: ['chart', 'timechart', 'bucket']
 	},
@@ -229,6 +239,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'bucket [<bin-options>...] <field> [AS <newfield>]',
 		requiredArgs: 1,
 		optionalArgs: 0,
+		parameters: PARAMS.BUCKET_PARAMS,
 		examples: ['... | bucket _time span=1h'],
 		relatedCommands: ['bin', 'chart', 'timechart']
 	},
@@ -240,6 +251,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'bucketdir pathfield=<field> sizefield=<field> [maxcount=<int>] [countfield=<field>] [sep=<char>]',
 		requiredArgs: 2,
 		optionalArgs: 3,
+		parameters: PARAMS.BUCKETDIR_PARAMS,
 		examples: ['... | top source | bucketdir pathfield=source sizefield=count maxcount=10'],
 		relatedCommands: ['cluster', 'dedup']
 	},
@@ -251,6 +263,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'chart [<chart-options>] [agg=<stats-agg-term>] (<stats-agg-term> | <sparkline-agg-term> | "(<eval-expression>)")... [BY <row-split> <column-split>] | [OVER <row-split>] [BY <column-split>] [<dedup_splitvals>]',
 		requiredArgs: 1,
 		optionalArgs: 6,
+		parameters: PARAMS.CHART_PARAMS,
 		examples: ['... | chart max(delay) OVER site', '... | chart max(delay) OVER site BY org', '... | chart count BY date_mday span=3 date_hour span=12'],
 		relatedCommands: ['timechart', 'bin', 'sichart']
 	},
@@ -262,6 +275,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'cluster [slc-options]...',
 		requiredArgs: 0,
 		optionalArgs: 8,
+		parameters: PARAMS.CLUSTER_PARAMS,
 		examples: ['... | cluster showcount=t | table cluster_count _raw | sort -cluster_count', '... | cluster t=0.9 showcount=t | sort - cluster_count | head 20'],
 		relatedCommands: ['anomalies', 'anomalousvalue', 'kmeans', 'outlier']
 	},
@@ -273,6 +287,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'cofilter <field1> <field2>',
 		requiredArgs: 2,
 		optionalArgs: 0,
+		parameters: PARAMS.COFILTER_PARAMS,
 		examples: ['... | cofilter user item'],
 		relatedCommands: ['associate', 'correlate']
 	},
@@ -284,6 +299,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'collect index=<string> [<arg-options>...]',
 		requiredArgs: 1,
 		optionalArgs: 13,
+		parameters: PARAMS.COLLECT_PARAMS,
 		examples: ['... | collect index=summary', '... | collect index=summary source=devtest output_format=hec'],
 		relatedCommands: ['overlap', 'sichart', 'sirare', 'sistats', 'sitimechart', 'sitop', 'tscollect']
 	},
@@ -317,6 +333,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'convert [timeformat=string] (<convert-function> [AS <field>])...',
 		requiredArgs: 1,
 		optionalArgs: 2,
+		parameters: PARAMS.CONVERT_PARAMS,
 		examples: ['... | convert auto(*)', '... | convert dur2sec(delay)', '... | convert timeformat="%H:%M:%S" ctime(_time) AS c_time'],
 		relatedCommands: ['eval', 'fieldformat']
 	},

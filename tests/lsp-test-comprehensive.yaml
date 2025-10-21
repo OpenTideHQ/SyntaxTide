@@ -42,6 +42,7 @@ configurations:
       | eval rtrimmed=rtrim(message)
       | eval replaced_text=replace(message, "error", "ERROR")
       | eval decoded_url=urldecode(uri)
+      | abstract unknownparam=123
       
       ```STEP 4: EVAL - Mathematical Functions (12 functions)```
       | eval abs_value=abs(response_time - avg_response)
@@ -198,7 +199,7 @@ configurations:
       | lookup geo_ip_lookup client_ip OUTPUT city, country, latitude, longitude
       
       ```STEP 22: IPLOCATION - GeoIP enrichment```
-      | iplocation prefix=geo_ client_ip
+      | iplocation prefix="geo_" client_ip
       
       ```STEP 23: EVAL with SPATH - JSON/XML extraction```
       | eval status_code=spath(response, "status.code")

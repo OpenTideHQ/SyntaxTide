@@ -222,11 +222,23 @@ export function validateCommandParameters(
 ): CommandParseResult {
 	const parsedParams = parseCommandParameters(commandLine, parameterDefs);
 	
+	// Count positional/field parameters that could satisfy MULTI_VALUE requirements
+	const positionalCount = parsedParams.filter(p => 
+		p.type === 'positional' || p.type === 'field'
+	).length;
+	
 	// Find missing required parameters
 	const missingRequired = parameterDefs.filter(def => {
 		if (!def.required) return false;
 		
-		// Check if this required parameter was provided
+		// For MULTI_VALUE parameters, check if we have enough positional/field params
+		if (def.type === ParameterType.MULTI_VALUE) {
+			// Typically multi-value requires at least 2 fields (e.g., arules needs 2+ fields)
+			const minRequired = 2;
+			return positionalCount < minRequired;
+		}
+		
+		// For other parameter types, check if this required parameter was provided
 		return !parsedParams.some(p => p.definition?.name === def.name);
 	});
 
@@ -280,8 +292,13 @@ export function getSuggestedParameters(
 
 	// Suggest parameters that haven't been provided yet
 	return parameterDefs.filter(def => {
-		// Don't suggest already-provided parameters (for named params)
-		if (def.type === ParameterType.NAMED && providedParams.has(def.name)) {
+		// Only suggest NAMED parameters in autocomplete
+		// MULTI_VALUE, POSITIONAL, FIELD, and CLAUSE are not typed with key=value syntax
+		if (def.type !== ParameterType.NAMED) {
+			return false;
+		}
+		// Don't suggest already-provided parameters
+		if (providedParams.has(def.name)) {
 			return false;
 		}
 		return true;
