@@ -10,6 +10,7 @@ exports.validateCommandArguments = validateCommandArguments;
 exports.validateSPLLine = validateSPLLine;
 const node_1 = require("vscode-languageserver/node");
 const spl_commands_enhanced_1 = require("./spl-commands-enhanced");
+const spl_commands_database_1 = require("./spl-commands-database");
 const spl_functions_database_1 = require("./spl-functions-database");
 /**
  * Parse function signature to extract parameter information
@@ -306,9 +307,9 @@ function validateSPLLine(line, lineNumber, documentUri) {
             const parts = commandPart.split(/\s+/);
             const commandName = parts[0];
             const argumentsStr = commandPart.substring(commandName.length).trim();
-            // Validate command existence
-            const cmd = (0, spl_commands_enhanced_1.getSPLCommandEnhanced)(commandName);
-            if (!cmd) {
+            // First check if command exists at all (in basic database)
+            const basicCmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
+            if (!basicCmd) {
                 diagnostics.push({
                     severity: node_1.DiagnosticSeverity.Error,
                     range: {
@@ -320,9 +321,14 @@ function validateSPLLine(line, lineNumber, documentUri) {
                 });
                 continue;
             }
-            // Validate command arguments
-            const argDiags = validateCommandArguments(commandName, argumentsStr, context);
-            diagnostics.push(...argDiags);
+            // If command exists in enhanced database, do detailed argument validation
+            const enhancedCmd = (0, spl_commands_enhanced_1.getSPLCommandEnhanced)(commandName);
+            if (enhancedCmd) {
+                // Validate command arguments with enhanced metadata
+                const argDiags = validateCommandArguments(commandName, argumentsStr, context);
+                diagnostics.push(...argDiags);
+            }
+            // If not in enhanced database, command is valid but we skip detailed validation
         }
     }
     // Extract and validate function calls

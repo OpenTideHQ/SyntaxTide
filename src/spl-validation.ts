@@ -5,6 +5,7 @@
 
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver/node';
 import { getSPLCommandEnhanced, SPLCommandEnhanced, SPLArgument } from './spl-commands-enhanced';
+import { getSPLCommand } from './spl-commands-database';
 import { SPL_FUNCTIONS, SPLFunction } from './spl-functions-database';
 
 export interface ValidationContext {
@@ -363,9 +364,9 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 			const commandName = parts[0];
 			const argumentsStr = commandPart.substring(commandName.length).trim();
 			
-			// Validate command existence
-			const cmd = getSPLCommandEnhanced(commandName);
-			if (!cmd) {
+			// First check if command exists at all (in basic database)
+			const basicCmd = getSPLCommand(commandName);
+			if (!basicCmd) {
 				diagnostics.push({
 					severity: DiagnosticSeverity.Error,
 					range: {
@@ -378,9 +379,14 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 				continue;
 			}
 			
-			// Validate command arguments
-			const argDiags = validateCommandArguments(commandName, argumentsStr, context);
-			diagnostics.push(...argDiags);
+			// If command exists in enhanced database, do detailed argument validation
+			const enhancedCmd = getSPLCommandEnhanced(commandName);
+			if (enhancedCmd) {
+				// Validate command arguments with enhanced metadata
+				const argDiags = validateCommandArguments(commandName, argumentsStr, context);
+				diagnostics.push(...argDiags);
+			}
+			// If not in enhanced database, command is valid but we skip detailed validation
 		}
 	}
 	
