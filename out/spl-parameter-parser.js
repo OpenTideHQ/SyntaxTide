@@ -133,11 +133,14 @@ function parseCommandParameters(commandLine, parameterDefs) {
             position += token.length;
             continue; // Continue parsing - filename might come after WHERE
         }
-        // For lookup commands, after WHERE, only parse the filename (first non-parameter token)
-        // Everything else is part of the search expression
+        // For lookup commands, after WHERE, only parse the filename (first non-parameter-like token)
+        // Everything else is part of the search expression and should be ignored
         if (isLookupCommand && whereEncountered) {
-            // If this is not a named parameter, it must be the filename
-            if (!isNamedParameter(token)) {
+            // The filename is the first token that looks like an identifier (not containing quotes or operators)
+            // Skip anything that looks like a search expression (contains =, quotes, etc.)
+            const looksLikeFilename = !token.includes('"') && !token.includes("'") &&
+                !token.match(/[<>!=]+/) && token.match(/^[a-zA-Z0-9_.-]+$/);
+            if (looksLikeFilename) {
                 const filenameDef = parameterDefs.find(p => p.name === 'filename');
                 parsedParams.push({
                     name: token,
@@ -149,6 +152,11 @@ function parseCommandParameters(commandLine, parameterDefs) {
                 });
                 position += token.length;
                 break; // Stop - everything after filename is part of search expression
+            }
+            else {
+                // This is part of the WHERE search expression, skip it
+                position += token.length;
+                continue;
             }
         }
         // Named parameter (key=value)
