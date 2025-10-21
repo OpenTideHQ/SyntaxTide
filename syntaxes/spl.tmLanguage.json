@@ -447,17 +447,47 @@
     "macros": {
       "patterns": [
         {
-          "name": "entity.name.function.macro.spl",
+          "name": "meta.macro-call.spl",
           "begin": "`",
           "end": "`",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.macro.begin.spl"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.macro.end.spl"
+            }
+          },
           "patterns": [
             {
-              "name": "variable.parameter.macro.spl",
-              "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+              "match": "([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()",
+              "captures": {
+                "1": {
+                  "name": "entity.name.function.macro.spl"
+                },
+                "2": {
+                  "name": "punctuation.definition.arguments.begin.spl"
+                }
+              },
+              "name": "meta.macro-with-args.spl"
             },
             {
-              "name": "punctuation.definition.arguments.begin.spl",
-              "match": "\\("
+              "match": "([a-zA-Z_][a-zA-Z0-9_]*)",
+              "captures": {
+                "1": {
+                  "name": "entity.name.function.macro.spl"
+                }
+              }
+            },
+            {
+              "name": "variable.parameter.macro.spl",
+              "match": "[^`()\\s,]+"
+            },
+            {
+              "name": "punctuation.separator.arguments.spl",
+              "match": ","
             },
             {
               "name": "punctuation.definition.arguments.end.spl",

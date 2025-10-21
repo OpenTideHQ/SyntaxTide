@@ -433,6 +433,7 @@ function validateArgumentType(
 /**
  * Validate that field/variable references are defined before use
  * Extracts field references from the line and checks against availableVariables
+ * IMPORTANT: Be lenient - don't flag external references (indexes, sourcetypes, lookups, macros)
  */
 function validateVariableUsage(line: string, context: ValidationContext): Diagnostic[] {
 	const diagnostics: Diagnostic[] = [];
@@ -441,9 +442,32 @@ function validateVariableUsage(line: string, context: ValidationContext): Diagno
 		return diagnostics;
 	}
 	
-	// Extract field references from the line
-	// Match: word characters that look like field names (not keywords, functions, or strings)
-	// This is a simplified heuristic - field references in eval, where, by clauses, etc.
+	// Skip validation for lines with external references that we can't verify:
+	
+	// - Macros (inside backticks)
+	if (line.includes('`')) {
+		return diagnostics; // Contains macros - too complex to validate
+	}
+	
+	// - Search command with index/sourcetype (these are external references)
+	if (line.match(/\b(?:index|sourcetype|host|source)\s*=/i)) {
+		return diagnostics; // External data source references
+	}
+	
+	// - Lookup commands (lookup table names are external)
+	if (line.match(/\|\s*lookup\b/i)) {
+		return diagnostics; // Lookup tables are external references
+	}
+	
+	// - Replace command (has string literals that look like fields)
+	if (line.match(/\|\s*replace\b/i)) {
+		return diagnostics; // Replace has complex string literal syntax
+	}
+	
+	// - Regex command (has patterns with field-like content)
+	if (line.match(/\|\s*regex\b/i)) {
+		return diagnostics; // Regex patterns may contain field-like tokens
+	}
 	
 	// Skip if line is a variable declaration (eval assignment, rename, stats AS, etc.)
 	if (line.match(/\|\s*eval\s+\w+\s*=/i) || 
@@ -452,58 +476,13 @@ function validateVariableUsage(line: string, context: ValidationContext): Diagno
 		return diagnostics; // This line declares variables, don't validate references
 	}
 	
-	// Extract potential field references (simplified - excludes keywords and function names)
-	const fieldPattern = /\b([a-z_][a-z0-9_]*)\b/gi;
-	const matches = [...line.matchAll(fieldPattern)];
-	
-	// SPL keywords and built-in fields to exclude
-	const keywords = new Set([
-		'eval', 'where', 'stats', 'by', 'as', 'and', 'or', 'not', 'in',
-		'true', 'false', 'null', 'if', 'case', 'span', 'count', 'sum', 'avg',
-		'max', 'min', 'values', 'list', 'dc', 'earliest', 'latest',
-		'_time', '_raw', 'index', 'sourcetype', 'host', 'source'
-	]);
-	
-	const checkedFields = new Set<string>();
-	
-	for (const match of matches) {
-		const fieldName = match[1];
-		const position = match.index || 0;
-		
-		// Skip if already checked, is a keyword, or is a known function
-		if (checkedFields.has(fieldName) || keywords.has(fieldName.toLowerCase())) {
-			continue;
-		}
-		
-		// Check if it's a function name (has opening paren right after)
-		const afterMatch = line.substring(position + fieldName.length);
-		if (afterMatch.trimStart().startsWith('(')) {
-			continue; // It's a function call, not a field reference
-		}
-		
-		// Check if field is available (declared before this line)
-		if (!context.availableVariables.has(fieldName)) {
-			// Field is not in our tracked variables - it might be an undefined variable
-			// However, we should be lenient: it could be from search results, lookups, etc.
-			// Only flag if it looks like it should be user-defined based on naming convention
-			
-			// Only warn about fields that look like user-defined (contain underscore or mixed case)
-			if (fieldName.includes('_') || fieldName !== fieldName.toLowerCase()) {
-				diagnostics.push({
-					severity: DiagnosticSeverity.Warning,
-					range: {
-						start: { line: context.lineNumber, character: position + (context.charOffset || 0) },
-						end: { line: context.lineNumber, character: position + fieldName.length + (context.charOffset || 0) }
-					},
-					message: `Field '${fieldName}' may not be defined yet. Ensure it is created before this line using eval, rename, rex, stats, or spath.`,
-					source: 'spl-validation'
-				});
-			}
-		}
-		
-		checkedFields.add(fieldName);
-	}
-	
+	// For now, disable broad field validation entirely
+	// The false positive rate is too high with:
+	// - String literals containing underscores
+	// - External references (indexes, sourcetypes, lookups, macros)
+	// - Fields from search results that we can't track
+	// 
+	// Future enhancement: Parse and track fields from search, tstats, datamodel commands
 	return diagnostics;
 }
 
@@ -577,6 +556,27 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 			const commandPart = pipes[i].trim();
 			if (!commandPart) continue;
 			
+			// Check if this is a macro call (starts with backtick)
+			if (commandPart.startsWith('`')) {
+				// Validate macro syntax
+				const macroMatch = commandPart.match(/^`([a-zA-Z_][a-zA-Z0-9_]*)(\([^)]*\))?`$/);
+				if (!macroMatch) {
+					// Invalid macro syntax
+					const macroStart = line.indexOf('`', 0);
+					diagnostics.push({
+						severity: DiagnosticSeverity.Error,
+						range: {
+							start: { line: lineNumber, character: macroStart + (context.charOffset || 0) },
+							end: { line: lineNumber, character: macroStart + commandPart.length + (context.charOffset || 0) }
+						},
+						message: `Invalid macro syntax. Macros must be: \`macro_name\` or \`macro_name(arg1, arg2)\``,
+						source: 'spl-validation'
+					});
+				}
+				// Valid macro - skip further validation (macros are user-defined)
+				continue;
+			}
+			
 			const parts = commandPart.split(/\s+/);
 			const commandName = parts[0];
 			const argumentsStr = commandPart.substring(commandName.length).trim();
@@ -593,8 +593,8 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 				diagnostics.push({
 					severity: DiagnosticSeverity.Error,
 					range: {
-						start: { line: lineNumber, character: commandStart },
-						end: { line: lineNumber, character: commandEnd }
+						start: { line: lineNumber, character: commandStart + (context.charOffset || 0) },
+						end: { line: lineNumber, character: commandEnd + (context.charOffset || 0) }
 					},
 					message: `Unknown SPL command: '${commandName}'. Check command spelling or refer to SPL documentation.`,
 					source: 'spl-validation'

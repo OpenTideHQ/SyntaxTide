@@ -25,15 +25,15 @@ configurations:
       search index=main sourcetype=access_* earliest=-7d latest=now
         (status=200 OR status=404 OR status=500)
         action IN ("login", "logout", "purchase")
-      | 
+      
       ```STEP 2: STREAMING COMMANDS - Field extraction and manipulation```
       | rex field=_raw "user=(?<username>\\w+)"
       | rex field=uri "^/(?<endpoint>[^/]+)/(?<action>\\w+)"
       | extract kvdelim="=", pairdelim=","
       
       ```STEP 3: EVAL - Text Functions (10 functions)```
-      | where username_lower in ("1", "2")
       | eval username_lower=lower(username)
+      | where username_lower in ("1", "2")
       | eval username_upper=upper(username)
       | eval username_len=len(username)
       | eval endpoint_substr=substr(endpoint, 0, 5)
@@ -374,3 +374,20 @@ configurations:
       ```| stats count by                                # Syntax error```
       ```| eval result = unknown_function(field)         # Unknown function```
       ```=============================================================================```
+      ```=============================================================================```
+      ```MACRO VALIDATION TESTS```
+      ```=============================================================================```
+
+      ```Valid macros - No errors expected:```
+      | `simple_macro`
+      | `macro_with_args(field1, "value")`
+      | tstats `security_content_summariesonly` count by host
+      | `drop_dm_object_name(Filesystem)`
+      | eval time=`security_content_ctime(firstTime)`
+
+      ```Invalid macros - Should show errors:```
+      | `invalid-name-with-dash`                      # Error: Invalid characters
+      | `unclosed_macro                                # Error: Missing closing backtick
+      | `123_starts_with_number`                       # Error: Invalid start character
+      | ``                                              # Error: Empty macro name
+

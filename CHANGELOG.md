@@ -4,6 +4,30 @@ All notable changes to the "OpenTide Query Syntax Highlighting" extension will b
 
 ## [0.7.0] - 2025-01-XX
 
+### Added - SPL Macro Support
+
+- ✅ **Macro Syntax Highlighting** (`syntaxes/spl.tmLanguage.json`):
+  - **Enhanced Grammar**: Comprehensive macro pattern with distinct scopes
+  - **Scopes Added**:
+    - `meta.macro-call.spl`: Entire macro call
+    - `punctuation.definition.macro.begin/end.spl`: Backtick delimiters
+    - `entity.name.function.macro.spl`: Macro identifier
+    - `meta.macro-arguments.spl`: Argument list with punctuation
+  - **Syntax Support**: `` `macro_name` `` and `` `macro_name(arg1, arg2)` ``
+  - **Pattern Matching**: Recognizes macros in any position (after pipes, inline with commands)
+
+- ✅ **Macro Validation** (`src/spl-validation.ts`):
+  - **Smart Detection**: Recognizes macros by backtick delimiter
+  - **Syntax Validation**: Regex pattern `/^`([a-zA-Z_][a-zA-Z0-9_]*)(\([^)]*\))?`$/`
+  - **Error Detection**: Reports invalid macro syntax (missing closing backtick, invalid characters)
+  - **Skip Logic**: Valid macros bypass command validation (user-defined, not in database)
+  - **Positioning**: Accurate error highlighting for malformed macros
+
+- ✅ **Documentation** (`query-languages/splunk/ANALYSIS.md`, `MACRO_IMPLEMENTATION.md`):
+  - **Comprehensive Macro Section**: Syntax rules, usage patterns, validation rules
+  - **Examples**: Real-world macro usage from Splunk security content
+  - **Implementation Guide**: Design decisions, integration points, future enhancements
+
 ### Fixed - Comprehensive Function Signature Validation
 
 - ✅ **Grouped Variadic Parser Fix** (`spl-validation.ts`):

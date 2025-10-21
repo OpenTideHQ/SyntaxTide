@@ -1461,9 +1461,36 @@ definition = index=main host=$arg1$ status=$arg2$
 ```
 
 **Characteristics:**
-- Backtick delimiters
-- Arguments passed via `$arg$` syntax
-- Expanded before search execution
+- Backtick delimiters: ` (grave accent, not apostrophe)
+- Arguments passed via `$arg$` syntax in macro definition
+- Expanded before search execution (preprocessing phase)
+- Can appear anywhere in SPL: after pipes, inline with commands, or as arguments
+- Macro names follow identifier rules: `[a-zA-Z_][a-zA-Z0-9_]*`
+- Arguments are comma-separated within parentheses
+
+**Common Usage Patterns:**
+```spl
+# Standalone macro (no arguments)
+| `custom_filter`
+
+# Macro with arguments
+| `search_pattern("error", "warning")`
+
+# Inline with command arguments
+| tstats `summariesonly` count by host
+
+# Multiple macros in sequence
+| `base_search` | `filter_logic` | `output_formatting`
+
+# Macros within eval expressions
+| eval status=`status_mapping(field)`
+```
+
+**Validation Rules:**
+- Syntax: Must match pattern `` `macro_name` `` or `` `macro_name(arg1, arg2, ...)` ``
+- No validation of macro existence (macros are user-defined in Splunk config)
+- Arguments can be any SPL expression (strings, numbers, field references)
+- Nested macro calls are not allowed
 
 ### 6.5 Comments
 
