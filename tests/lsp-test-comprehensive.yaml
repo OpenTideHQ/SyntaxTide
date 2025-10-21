@@ -25,13 +25,14 @@ configurations:
       search index=main sourcetype=access_* earliest=-7d latest=now
         (status=200 OR status=404 OR status=500)
         action IN ("login", "logout", "purchase")
-      
+      | 
       ```STEP 2: STREAMING COMMANDS - Field extraction and manipulation```
       | rex field=_raw "user=(?<username>\\w+)"
       | rex field=uri "^/(?<endpoint>[^/]+)/(?<action>\\w+)"
       | extract kvdelim="=", pairdelim=","
       
       ```STEP 3: EVAL - Text Functions (10 functions)```
+      | where username_lower in ("1", "2")
       | eval username_lower=lower(username)
       | eval username_upper=upper(username)
       | eval username_len=len(username)
@@ -114,7 +115,7 @@ configurations:
       | eval null_value=null()
       | eval null_if_equal=nullif(field1, field2)
       | eval search_match=if(searchmatch("error OR failed"), "problematic", "ok")
-      | eval validated=validate(isint(count) AND count > 0, "valid", "invalid")
+      | eval validated=validate()
       | eval true_value=true()
       | eval false_value=false()
       
@@ -131,6 +132,7 @@ configurations:
       | eval mv_sorted=mvsort(values)
       | eval mv_zipped=mvzip(keys, values, "=")
       | eval mv_split=split(csv_line, ",")
+      | eval
       
       ```STEP 12: EVAL - Statistical Functions (4 functions)```
       | eval average=avg(field1, field2, field3)
@@ -156,6 +158,7 @@ configurations:
       | eval exact_json=json_extract_exact(data, "$.value")
       | eval json_updated=json_set(json_field, "$.status", "processed")
       | eval json_appended=json_append(json_arr, "$.items", new_item)
+      | eval bad_func=min()
       
       ```STEP 15: WHERE - Filtering with complex conditions```
       | where (bytes > 1000 AND duration < 500)
@@ -179,7 +182,14 @@ configurations:
       | fillnull value=0 bytes, duration
       | fillnull value="unknown" endpoint, action
       | fillnull value="-" user
-      
+
+      ```Using macros```
+      | tstats `security_content_summariesonly` values(Filesystem.file_path) as file_path count min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Filesystem where Filesystem.file_name IN ("*.exe", "*.dll", "*.sys", "*.com", "*.vbs", "*.vbe", "*.js", "*.ps1", "*.bat", "*.cmd", "*.pif", "*.msc") AND Filesystem.file_path IN ("*\\windows\\fonts\\*", "*\\windows\\temp\\*", "*\\users\\public\\*", "*\\windows\\debug\\*", "*\\Users\\Administrator\\Music\\*", "*\\Windows\\servicing\\*", "*\\Users\\Default\\*", "*Recycle.bin*", "*\\Windows\\Media\\*", "*\\Windows\\repair\\*", "*\\PerfLogs\\*") by Filesystem.action Filesystem.dest Filesystem.file_access_time Filesystem.file_create_time Filesystem.file_hash Filesystem.file_modify_time Filesystem.file_name Filesystem.file_path Filesystem.file_acl Filesystem.file_size Filesystem.process_guid Filesystem.process_id Filesystem.user Filesystem.vendor_product 
+      | `drop_dm_object_name(Filesystem)` 
+      | `security_content_ctime(firstTime)` 
+      | `security_content_ctime(lastTime)` 
+      | `executables_or_script_creation_in_suspicious_path_filter`
+
       ```STEP 20: REPLACE - Value replacement```
       | replace 200 with "OK", 404 with "Not Found", 500 with "Internal Error" in http_status
       

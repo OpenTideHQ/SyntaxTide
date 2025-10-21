@@ -35,19 +35,19 @@ function parseFunctionSignature(signature) {
     if (!paramsStr.trim()) {
         return { minParams: 0, maxParams: 0, isVariadic: false, paramNames: [] };
     }
-    // Check for grouped variadic pattern FIRST: entire signature like "(<p1>, <p2>)..."
-    // This matches: validate(<condition>, <value>)... or case(<condition>, <value>)...
-    const groupedVariadicMatch = paramsStr.match(/^\((.+)\)\.\.\.$/);
-    if (groupedVariadicMatch) {
-        // Count parameters in the group
-        const groupContent = groupedVariadicMatch[1];
-        const groupParams = groupContent.split(',').map(p => p.trim());
-        const minParams = groupParams.length; // At least one complete group required
+    // Check for grouped variadic pattern: ENTIRE signature ends with )...
+    // Examples: validate(<condition>, <value>)... or case(<condition>, <value>)...
+    // The signature format is: functionName(<params>)...
+    if (signature.endsWith(')...')) {
+        // This is a grouped variadic function
+        // Count the number of parameters in the group
+        const params = paramsStr.split(',').map(p => p.trim()).filter(p => p.length > 0);
+        const minParams = params.length; // At least one complete group required
         return {
             minParams,
             maxParams: Infinity,
             isVariadic: true,
-            paramNames: groupParams
+            paramNames: params
         };
     }
     // Split by commas, but handle nested brackets and angle brackets
@@ -131,18 +131,14 @@ function validateFunctionCall(functionName, args, context, startPos) {
     let endChar = context.line.length;
     if (startPos !== undefined) {
         // Use the startPos directly - it's already correct from extractFunctionCalls
-        startChar = startPos;
+        startChar = startPos + (context.charOffset || 0); // Add YAML indentation offset
         // Highlight function name + opening paren (visual cue)
-        endChar = startPos + functionName.length + 1;
-        // Debug logging
-        console.log(`[validateFunctionCall] Function: ${functionName}, startPos: ${startPos}, startChar: ${startChar}, endChar: ${endChar}`);
-        console.log(`[validateFunctionCall] Line: "${context.line}"`);
-        console.log(`[validateFunctionCall] Highlighted text: "${context.line.substring(startChar, endChar)}"`);
+        endChar = startPos + functionName.length + 1 + (context.charOffset || 0);
     }
     else {
         // Fallback: get the leading whitespace if startPos not provided
         const leadingWhitespace = context.line.match(/^\s*/)?.[0].length || 0;
-        startChar = leadingWhitespace;
+        startChar = leadingWhitespace + (context.charOffset || 0);
     }
     // Check parameter count
     if (argCount < sigInfo.minParams) {
@@ -260,8 +256,9 @@ function validateCommandArguments(commandName, argumentsStr, context, commandSta
     const trimmedArgs = argumentsStr.trim();
     // Calculate proper character range for highlighting
     const leadingWhitespace = context.line.match(/^\s*/)?.[0].length || 0;
-    let startChar = commandStartPos !== undefined ? commandStartPos : leadingWhitespace;
-    let endChar = commandStartPos !== undefined ? commandStartPos + commandName.length : context.line.length;
+    const charOffset = context.charOffset || 0;
+    let startChar = commandStartPos !== undefined ? commandStartPos + charOffset : leadingWhitespace;
+    let endChar = commandStartPos !== undefined ? commandStartPos + commandName.length + charOffset : context.line.length;
     // Check if required arguments are provided
     if (cmd.requiredArgs.length > 0 && !trimmedArgs) {
         diagnostics.push({
@@ -364,9 +361,115 @@ function validateArgumentType(value, argDef, context) {
 /**
  * Validate a single line of SPL
  */
-function validateSPLLine(line, lineNumber, documentUri) {
+/**
+ * Validate that field/variable references are defined before use
+ * Extracts field references from the line and checks against availableVariables
+ */
+function validateVariableUsage(line, context) {
     const diagnostics = [];
-    const context = { line, lineNumber, documentUri };
+    if (!context.availableVariables) {
+        return diagnostics;
+    }
+    // Extract field references from the line
+    // Match: word characters that look like field names (not keywords, functions, or strings)
+    // This is a simplified heuristic - field references in eval, where, by clauses, etc.
+    // Skip if line is a variable declaration (eval assignment, rename, stats AS, etc.)
+    if (line.match(/\|\s*eval\s+\w+\s*=/i) ||
+        line.match(/\|\s*rename\s+/i) ||
+        line.match(/\s+(?:AS|as)\s+\w+/)) {
+        return diagnostics; // This line declares variables, don't validate references
+    }
+    // Extract potential field references (simplified - excludes keywords and function names)
+    const fieldPattern = /\b([a-z_][a-z0-9_]*)\b/gi;
+    const matches = [...line.matchAll(fieldPattern)];
+    // SPL keywords and built-in fields to exclude
+    const keywords = new Set([
+        'eval', 'where', 'stats', 'by', 'as', 'and', 'or', 'not', 'in',
+        'true', 'false', 'null', 'if', 'case', 'span', 'count', 'sum', 'avg',
+        'max', 'min', 'values', 'list', 'dc', 'earliest', 'latest',
+        '_time', '_raw', 'index', 'sourcetype', 'host', 'source'
+    ]);
+    const checkedFields = new Set();
+    for (const match of matches) {
+        const fieldName = match[1];
+        const position = match.index || 0;
+        // Skip if already checked, is a keyword, or is a known function
+        if (checkedFields.has(fieldName) || keywords.has(fieldName.toLowerCase())) {
+            continue;
+        }
+        // Check if it's a function name (has opening paren right after)
+        const afterMatch = line.substring(position + fieldName.length);
+        if (afterMatch.trimStart().startsWith('(')) {
+            continue; // It's a function call, not a field reference
+        }
+        // Check if field is available (declared before this line)
+        if (!context.availableVariables.has(fieldName)) {
+            // Field is not in our tracked variables - it might be an undefined variable
+            // However, we should be lenient: it could be from search results, lookups, etc.
+            // Only flag if it looks like it should be user-defined based on naming convention
+            // Only warn about fields that look like user-defined (contain underscore or mixed case)
+            if (fieldName.includes('_') || fieldName !== fieldName.toLowerCase()) {
+                diagnostics.push({
+                    severity: node_1.DiagnosticSeverity.Warning,
+                    range: {
+                        start: { line: context.lineNumber, character: position + (context.charOffset || 0) },
+                        end: { line: context.lineNumber, character: position + fieldName.length + (context.charOffset || 0) }
+                    },
+                    message: `Field '${fieldName}' may not be defined yet. Ensure it is created before this line using eval, rename, rex, stats, or spath.`,
+                    source: 'spl-validation'
+                });
+            }
+        }
+        checkedFields.add(fieldName);
+    }
+    return diagnostics;
+}
+/**
+ * Split SPL line by pipe operators, but ignore pipes inside quoted strings
+ * Handles both single and double quotes
+ */
+function splitByPipes(line) {
+    const parts = [];
+    let currentPart = '';
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escapeNext = false;
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (escapeNext) {
+            currentPart += char;
+            escapeNext = false;
+            continue;
+        }
+        if (char === '\\') {
+            currentPart += char;
+            escapeNext = true;
+            continue;
+        }
+        if (char === '"' && !inSingleQuote) {
+            inDoubleQuote = !inDoubleQuote;
+            currentPart += char;
+            continue;
+        }
+        if (char === "'" && !inDoubleQuote) {
+            inSingleQuote = !inSingleQuote;
+            currentPart += char;
+            continue;
+        }
+        if (char === '|' && !inSingleQuote && !inDoubleQuote) {
+            parts.push(currentPart);
+            currentPart = '';
+            continue;
+        }
+        currentPart += char;
+    }
+    // Add the last part
+    parts.push(currentPart);
+    return parts;
+}
+function validateSPLLine(line, lineNumber, documentUri, charOffset = 0, availableVariables) {
+    const diagnostics = [];
+    const context = { line, lineNumber, documentUri, charOffset, availableVariables };
     // Skip empty lines and comments
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//') || trimmed.startsWith('```')) {
@@ -374,7 +477,7 @@ function validateSPLLine(line, lineNumber, documentUri) {
     }
     // Extract and validate commands (after pipe operators)
     if (trimmed.includes('|')) {
-        const pipes = trimmed.split('|');
+        const pipes = splitByPipes(trimmed);
         for (let i = 1; i < pipes.length; i++) {
             const commandPart = pipes[i].trim();
             if (!commandPart)
@@ -417,6 +520,11 @@ function validateSPLLine(line, lineNumber, documentUri) {
         // Pass the startPos to get accurate highlighting
         const funcDiags = validateFunctionCall(funcCall.name, funcCall.args, context, funcCall.startPos);
         diagnostics.push(...funcDiags);
+    }
+    // Validate variable usage (check if variables are used before declaration)
+    if (context.availableVariables) {
+        const varDiags = validateVariableUsage(line, context);
+        diagnostics.push(...varDiags);
     }
     return diagnostics;
 }

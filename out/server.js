@@ -48,6 +48,8 @@ const spl_validation_1 = require("./spl-validation");
 // Create a connection for the server
 const connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
 // Document-specific variable tracking
+// Store user-defined variables per document for autocomplete
+// Map of document URI -> Map of variable name -> declaration line number
 const documentVariables = new Map();
 // Create a simple text document manager
 const documents = new node_1.TextDocuments(vscode_languageserver_textdocument_1.TextDocument);
@@ -138,11 +140,14 @@ function extractSPLQuery(yamlContent, fullText) {
                         // Count newlines up to the end of "query: |" to get the offset
                         const matchEnd = (match.index || 0) + match[0].length;
                         const offset = fullText.substring(0, matchEnd).split('\n').length;
-                        connection.console.log(`[Offset] Found query block at line ${offset} for platform ${platform}`);
-                        return { query: config.query, offset };
+                        // Find the first non-empty query line to detect indentation
+                        const firstQueryLine = fullText.substring(matchEnd).split('\n')[1] || '';
+                        const indentChars = firstQueryLine.length - firstQueryLine.trimStart().length;
+                        connection.console.log(`[Offset] Found query block at line ${offset} for platform ${platform}, indent: ${indentChars} chars`);
+                        return { query: config.query, offset, indentChars };
                     }
                     // Fallback: count lines up to query content
-                    return { query: config.query, offset: 0 };
+                    return { query: config.query, offset: 0, indentChars: 0 };
                 }
             }
         }
@@ -154,14 +159,16 @@ function extractSPLQuery(yamlContent, fullText) {
     return null;
 }
 /**
- * Extract user-defined variables from SPL query
+ * Extract user-defined variables from SPL query with line tracking
  * Tracks variables from: eval, rename, rex (field extraction), stats (aggregations), spath
+ * Returns Map of variable name to declaration line
  */
 function extractVariablesFromQuery(query) {
-    const variables = new Set();
+    const variables = new Map();
     const lines = query.split('\n');
     connection.console.log(`[Variable Extraction] Processing query with ${lines.length} lines`);
-    for (const line of lines) {
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
         const trimmedLine = line.trim();
         // Skip comments and empty lines (both YAML # and SPL ``` comments)
         if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('```')) {
@@ -176,8 +183,8 @@ function extractVariablesFromQuery(query) {
             for (const assignment of assignments) {
                 const fieldMatch = assignment.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
                 if (fieldMatch) {
-                    variables.add(fieldMatch[1]);
-                    connection.console.log(`[Variable] Found eval variable: ${fieldMatch[1]}`);
+                    variables.set(fieldMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found eval variable: ${fieldMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
@@ -190,8 +197,8 @@ function extractVariablesFromQuery(query) {
             for (const rename of renames) {
                 const asMatch = rename.match(/\s+(?:AS|as)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
                 if (asMatch) {
-                    variables.add(asMatch[1]);
-                    connection.console.log(`[Variable] Found rename variable: ${asMatch[1]}`);
+                    variables.set(asMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found rename variable: ${asMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
@@ -200,8 +207,8 @@ function extractVariablesFromQuery(query) {
         const rexNamedGroups = trimmedLine.matchAll(/\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>/g);
         if (trimmedLine.includes('rex')) {
             for (const match of rexNamedGroups) {
-                variables.add(match[1]);
-                connection.console.log(`[Variable] Found rex variable: ${match[1]}`);
+                variables.set(match[1], lineIndex);
+                connection.console.log(`[Variable] Found rex variable: ${match[1]} at line ${lineIndex}`);
             }
         }
         // Extract from stats aggregations: stats count AS event_count, avg(bytes) AS avg_bytes
@@ -212,16 +219,16 @@ function extractVariablesFromQuery(query) {
             for (const agg of aggregations) {
                 const asMatch = agg.match(/\s+(?:AS|as)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
                 if (asMatch) {
-                    variables.add(asMatch[1]);
-                    connection.console.log(`[Variable] Found stats variable: ${asMatch[1]}`);
+                    variables.set(asMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found stats variable: ${asMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
         // Extract from spath: spath output=newfield path=json.path
         const spathMatch = trimmedLine.match(/\|\s*spath\s+.*?output=([a-zA-Z_][a-zA-Z0-9_]*)/i);
         if (spathMatch) {
-            variables.add(spathMatch[1]);
-            connection.console.log(`[Variable] Found spath variable: ${spathMatch[1]}`);
+            variables.set(spathMatch[1], lineIndex);
+            connection.console.log(`[Variable] Found spath variable: ${spathMatch[1]} at line ${lineIndex}`);
         }
         // Extract from streamstats, eventstats (similar to stats)
         const streamstatsMatch = trimmedLine.match(/\|\s*(?:streamstats|eventstats)\s+(.+?)(?:\s+by\s+|$)/i);
@@ -231,13 +238,13 @@ function extractVariablesFromQuery(query) {
             for (const agg of aggregations) {
                 const asMatch = agg.match(/\s+(?:AS|as)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
                 if (asMatch) {
-                    variables.add(asMatch[1]);
-                    connection.console.log(`[Variable] Found streamstats/eventstats variable: ${asMatch[1]}`);
+                    variables.set(asMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found streamstats/eventstats variable: ${asMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
     }
-    connection.console.log(`[Variable Extraction] Found ${variables.size} total variables: ${Array.from(variables).join(', ')}`);
+    connection.console.log(`[Variable Extraction] Found ${variables.size} total variables: ${Array.from(variables.keys()).join(', ')}`);
     return variables;
 }
 /**
@@ -266,7 +273,8 @@ async function validateTextDocument(textDocument) {
         }
         const query = extracted.query;
         const lineOffset = extracted.offset;
-        connection.console.log(`[Validation] Query starts at line ${lineOffset}`);
+        const charOffset = extracted.indentChars;
+        connection.console.log(`[Validation] Query starts at line ${lineOffset}, character offset: ${charOffset}`);
         // Extract and cache variables for this document
         const variables = extractVariablesFromQuery(query);
         documentVariables.set(textDocument.uri, variables);
@@ -274,8 +282,15 @@ async function validateTextDocument(textDocument) {
         // Use enhanced validation for each line
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            // Pass the adjusted line number (query line + offset)
-            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, i + lineOffset, textDocument.uri);
+            // Build set of variables available at this line (declared before this line)
+            const availableVariables = new Set();
+            for (const [varName, declLine] of variables.entries()) {
+                if (declLine < i) {
+                    availableVariables.add(varName);
+                }
+            }
+            // Pass the adjusted line number (query line + offset), character offset, and available variables
+            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, i + lineOffset, textDocument.uri, charOffset, availableVariables);
             diagnostics.push(...lineDiagnostics);
         }
     }
@@ -299,9 +314,51 @@ connection.onCompletion((_textDocumentPosition) => {
     const line = text.split('\n')[position.line];
     const beforeCursor = line.substring(0, position.character);
     const completionItems = [];
-    // Get variables defined in current document
-    const variables = documentVariables.get(document.uri) || new Set();
-    connection.console.log(`[Autocomplete] Document has ${variables.size} variables: ${Array.from(variables).join(', ')}`);
+    // Get variables defined in current document before this line
+    const allVariables = documentVariables.get(document.uri) || new Map();
+    const availableVariables = new Map();
+    // Extract SPL query to get the line offset
+    let yamlDocs;
+    try {
+        try {
+            yamlDocs = yaml.parseAllDocuments(text).map(doc => doc.toJSON());
+        }
+        catch {
+            yamlDocs = [yaml.parse(text)];
+        }
+        const extracted = extractSPLQuery(yamlDocs, text);
+        if (extracted) {
+            const lineOffset = extracted.offset;
+            // Current line in the query (0-based, relative to query start)
+            const currentQueryLine = position.line - lineOffset;
+            connection.console.log(`[Autocomplete] Position line: ${position.line}, Query offset: ${lineOffset}, Current query line: ${currentQueryLine}`);
+            // Only include variables declared before the current line in the query
+            for (const [varName, declLine] of allVariables.entries()) {
+                if (declLine < currentQueryLine) {
+                    availableVariables.set(varName, declLine);
+                    connection.console.log(`[Autocomplete] Including variable '${varName}' declared at query line ${declLine}`);
+                }
+                else {
+                    connection.console.log(`[Autocomplete] Excluding variable '${varName}' declared at query line ${declLine} (after current line ${currentQueryLine})`);
+                }
+            }
+        }
+        else {
+            // Not in a query context, show all variables
+            connection.console.log(`[Autocomplete] Not in SPL query context, showing all variables`);
+            allVariables.forEach((declLine, varName) => {
+                availableVariables.set(varName, declLine);
+            });
+        }
+    }
+    catch (error) {
+        connection.console.log(`[Autocomplete] Error extracting query context: ${error}`);
+        // Fallback: show all variables
+        allVariables.forEach((declLine, varName) => {
+            availableVariables.set(varName, declLine);
+        });
+    }
+    connection.console.log(`[Autocomplete] Document has ${allVariables.size} total variables, ${availableVariables.size} available at position line ${position.line}`);
     // Suggest SPL commands after pipe operator
     if (beforeCursor.trim().endsWith('|') || beforeCursor.includes('|')) {
         spl_commands_database_1.SPL_COMMANDS.forEach((cmd, index) => {
@@ -326,16 +383,16 @@ connection.onCompletion((_textDocumentPosition) => {
             });
         });
     }
-    // Always suggest user-defined variables (fields created by eval, rename, rex, stats, etc.)
+    // Suggest user-defined variables that were declared before current line
     // These are valuable in any context: eval, where, stats BY, fields, etc.
-    if (variables.size > 0) {
-        connection.console.log(`[Autocomplete] Adding ${variables.size} variables to completion list`);
-        variables.forEach((varName) => {
+    if (availableVariables.size > 0) {
+        connection.console.log(`[Autocomplete] Adding ${availableVariables.size} variables to completion list`);
+        availableVariables.forEach((declLine, varName) => {
             completionItems.push({
                 label: varName,
                 kind: node_1.CompletionItemKind.Variable,
                 data: -1, // Special marker for variables
-                detail: 'User-defined field',
+                detail: `User-defined field (query line ${declLine + 1})`,
                 documentation: `Field defined in this query via eval, rename, rex, stats, or spath`,
                 sortText: `0_${varName}` // Sort variables to top of suggestions
             });

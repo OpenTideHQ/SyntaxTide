@@ -1003,6 +1003,308 @@ exports.SPL_FUNCTIONS = [
         returnType: 'multivalue',
         examples: ['mvrange(0, 10, 1)', 'eval numbers=mvrange(1, 100, 10)'],
         relatedFunctions: ['mvappend']
+    },
+    // Statistical and Charting Functions (used with stats, chart, timechart, eventstats, streamstats)
+    // Aggregate Functions
+    {
+        name: 'count',
+        category: 'Statistical',
+        description: 'Returns the number of occurrences where the field contains any value. Can also use abbreviation c().',
+        signature: 'count(<field>)',
+        returnType: 'number',
+        examples: ['count(status)', 'count(eval(status=200))', 'count(_raw)'],
+        relatedFunctions: ['dc', 'distinct_count', 'sum']
+    },
+    {
+        name: 'c',
+        category: 'Statistical',
+        description: 'Abbreviation for count(). Returns the number of occurrences where the field contains any value.',
+        signature: 'c(<field>)',
+        returnType: 'number',
+        examples: ['c(status)', 'c(_raw)'],
+        relatedFunctions: ['count', 'dc']
+    },
+    {
+        name: 'distinct_count',
+        category: 'Statistical',
+        description: 'Returns the count of distinct values in the field. Can also use abbreviation dc(). Processes field values as strings.',
+        signature: 'distinct_count(<field>)',
+        returnType: 'number',
+        examples: ['distinct_count(host)', 'distinct_count(clientip)'],
+        relatedFunctions: ['dc', 'estdc', 'count']
+    },
+    {
+        name: 'dc',
+        category: 'Statistical',
+        description: 'Abbreviation for distinct_count(). Returns the count of distinct values in the field. Processes field values as strings.',
+        signature: 'dc(<field>)',
+        returnType: 'number',
+        examples: ['dc(host)', 'dc(user)', 'dc(clientip)'],
+        relatedFunctions: ['distinct_count', 'estdc', 'count']
+    },
+    {
+        name: 'estdc',
+        category: 'Statistical',
+        description: 'Returns the estimated count of distinct values in the field. More efficient for high cardinality fields.',
+        signature: 'estdc(<field>)',
+        returnType: 'number',
+        examples: ['estdc(host)', 'estdc(user_id)'],
+        relatedFunctions: ['dc', 'distinct_count', 'estdc_error']
+    },
+    {
+        name: 'estdc_error',
+        category: 'Statistical',
+        description: 'Returns the theoretical error of the estimated distinct count. Represents error ratio.',
+        signature: 'estdc_error(<field>)',
+        returnType: 'number',
+        examples: ['estdc_error(host)'],
+        relatedFunctions: ['estdc']
+    },
+    {
+        name: 'mean',
+        category: 'Statistical',
+        description: 'Returns the arithmetic mean of the field. Same as avg().',
+        signature: 'mean(<field>)',
+        returnType: 'number',
+        examples: ['mean(duration)', 'mean(bytes)'],
+        relatedFunctions: ['avg', 'median', 'stdev']
+    },
+    {
+        name: 'median',
+        category: 'Statistical',
+        description: 'Returns the middle-most value of the field. Approximates to higher value for even counts.',
+        signature: 'median(<field>)',
+        returnType: 'number',
+        examples: ['median(response_time)', 'median(bytes)'],
+        relatedFunctions: ['mean', 'avg', 'perc50']
+    },
+    {
+        name: 'mode',
+        category: 'Statistical',
+        description: 'Returns the most frequent value in the field. Processes field values as strings.',
+        signature: 'mode(<field>)',
+        returnType: 'any',
+        examples: ['mode(status)', 'mode(host)', 'mode(action)'],
+        relatedFunctions: ['count', 'values']
+    },
+    {
+        name: 'perc',
+        category: 'Statistical',
+        description: 'Returns the Nth percentile value. Use perc<N>() where N is 0-100 (e.g., perc95, perc50).',
+        signature: 'perc<percentile>(<field>)',
+        returnType: 'number',
+        examples: ['perc95(response_time)', 'perc50(duration)', 'perc99(bytes)'],
+        relatedFunctions: ['upperperc', 'exactperc', 'median']
+    },
+    {
+        name: 'upperperc',
+        category: 'Statistical',
+        description: 'Returns approximate upper bound for percentile. Use upperperc<N>() where N is 0-100.',
+        signature: 'upperperc<percentile>(<field>)',
+        returnType: 'number',
+        examples: ['upperperc95(response_time)', 'upperperc99(latency)'],
+        relatedFunctions: ['perc', 'exactperc']
+    },
+    {
+        name: 'exactperc',
+        category: 'Statistical',
+        description: 'Returns exact percentile value. Very resource expensive for high cardinality fields. Use exactperc<N>() where N is 0-100.',
+        signature: 'exactperc<percentile>(<field>)',
+        returnType: 'number',
+        examples: ['exactperc95(response_time)', 'exactperc50(duration)'],
+        relatedFunctions: ['perc', 'upperperc', 'median']
+    },
+    {
+        name: 'range',
+        category: 'Statistical',
+        description: 'Returns the difference between max and min values in the field. Field values must be numeric.',
+        signature: 'range(<field>)',
+        returnType: 'number',
+        examples: ['range(bytes)', 'range(duration)', 'range(temperature)'],
+        relatedFunctions: ['max', 'min', 'stdev']
+    },
+    {
+        name: 'stdev',
+        category: 'Statistical',
+        description: 'Returns the sample standard deviation of the field.',
+        signature: 'stdev(<field>)',
+        returnType: 'number',
+        examples: ['stdev(response_time)', 'stdev(bytes)'],
+        relatedFunctions: ['stdevp', 'var', 'mean']
+    },
+    {
+        name: 'stdevp',
+        category: 'Statistical',
+        description: 'Returns the population standard deviation of the field.',
+        signature: 'stdevp(<field>)',
+        returnType: 'number',
+        examples: ['stdevp(response_time)', 'stdevp(latency)'],
+        relatedFunctions: ['stdev', 'varp', 'var']
+    },
+    {
+        name: 'sumsq',
+        category: 'Statistical',
+        description: 'Returns the sum of the squares of the values in the field. Used to evaluate variance.',
+        signature: 'sumsq(<field>)',
+        returnType: 'number',
+        examples: ['sumsq(deviation)', 'sumsq(error)'],
+        relatedFunctions: ['sum', 'var', 'stdev']
+    },
+    {
+        name: 'var',
+        category: 'Statistical',
+        description: 'Returns the sample variance of the field.',
+        signature: 'var(<field>)',
+        returnType: 'number',
+        examples: ['var(response_time)', 'var(bytes)'],
+        relatedFunctions: ['varp', 'stdev', 'mean']
+    },
+    {
+        name: 'varp',
+        category: 'Statistical',
+        description: 'Returns the population variance of the field.',
+        signature: 'varp(<field>)',
+        returnType: 'number',
+        examples: ['varp(response_time)', 'varp(latency)'],
+        relatedFunctions: ['var', 'stdevp', 'stdev']
+    },
+    // Event Order Functions
+    {
+        name: 'first',
+        category: 'Statistical',
+        description: 'Returns the first seen value in a field. Based on event order, not chronological order.',
+        signature: 'first(<field>)',
+        returnType: 'any',
+        examples: ['first(_raw)', 'first(status)', 'first(user)'],
+        relatedFunctions: ['last', 'earliest', 'latest']
+    },
+    {
+        name: 'last',
+        category: 'Statistical',
+        description: 'Returns the last seen value in a field. Based on event order, not chronological order.',
+        signature: 'last(<field>)',
+        returnType: 'any',
+        examples: ['last(_raw)', 'last(status)', 'last(user)'],
+        relatedFunctions: ['first', 'earliest', 'latest']
+    },
+    // Time Functions
+    {
+        name: 'earliest',
+        category: 'Statistical',
+        description: 'Returns the chronologically earliest (oldest) seen occurrence of a value in a field.',
+        signature: 'earliest(<field>)',
+        returnType: 'any',
+        examples: ['earliest(_time)', 'earliest(timestamp)', 'earliest(log_entry)'],
+        relatedFunctions: ['latest', 'earliest_time', 'first']
+    },
+    {
+        name: 'earliest_time',
+        category: 'Statistical',
+        description: 'Returns the UNIX time of the earliest (oldest) occurrence of a value. Used with rate calculations.',
+        signature: 'earliest_time(<field>)',
+        returnType: 'number',
+        examples: ['earliest_time(counter)', 'earliest_time(_value)'],
+        relatedFunctions: ['earliest', 'latest_time', 'rate']
+    },
+    {
+        name: 'latest',
+        category: 'Statistical',
+        description: 'Returns the chronologically latest (most recent) seen occurrence of a value in a field.',
+        signature: 'latest(<field>)',
+        returnType: 'any',
+        examples: ['latest(_time)', 'latest(timestamp)', 'latest(status)'],
+        relatedFunctions: ['earliest', 'latest_time', 'last']
+    },
+    {
+        name: 'latest_time',
+        category: 'Statistical',
+        description: 'Returns the UNIX time of the latest (most recent) occurrence of a value. Used with rate calculations.',
+        signature: 'latest_time(<field>)',
+        returnType: 'number',
+        examples: ['latest_time(counter)', 'latest_time(_value)'],
+        relatedFunctions: ['latest', 'earliest_time', 'rate']
+    },
+    {
+        name: 'per_day',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each day. Use with timechart command.',
+        signature: 'per_day(<field>)',
+        returnType: 'number',
+        examples: ['per_day(total)', 'per_day(eval(action="purchase"))'],
+        relatedFunctions: ['per_hour', 'per_minute', 'per_second', 'rate']
+    },
+    {
+        name: 'per_hour',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each hour. Use with timechart command.',
+        signature: 'per_hour(<field>)',
+        returnType: 'number',
+        examples: ['per_hour(total)', 'per_hour(eval(method="GET"))'],
+        relatedFunctions: ['per_day', 'per_minute', 'per_second', 'rate']
+    },
+    {
+        name: 'per_minute',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each minute. Use with timechart command.',
+        signature: 'per_minute(<field>)',
+        returnType: 'number',
+        examples: ['per_minute(total)', 'per_minute(eval(status=200))'],
+        relatedFunctions: ['per_day', 'per_hour', 'per_second', 'rate']
+    },
+    {
+        name: 'per_second',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each second. Use with timechart command.',
+        signature: 'per_second(<field>)',
+        returnType: 'number',
+        examples: ['per_second(kb)', 'per_second(requests)'],
+        relatedFunctions: ['per_day', 'per_hour', 'per_minute', 'rate']
+    },
+    {
+        name: 'rate',
+        category: 'Statistical',
+        description: 'Returns the per-second rate change of the value. Formula: (latest - earliest) / (latest_time - earliest_time). Handles counter resets.',
+        signature: 'rate(<field>)',
+        returnType: 'number',
+        examples: ['rate(traffic.incoming)', 'rate(counter_metric)'],
+        relatedFunctions: ['rate_avg', 'rate_sum', 'earliest', 'latest']
+    },
+    {
+        name: 'rate_avg',
+        category: 'Statistical',
+        description: 'Returns the average rates for time series associated with an accumulating counter metric.',
+        signature: 'rate_avg(<field>)',
+        returnType: 'number',
+        examples: ['rate_avg(spl.mlog.thruput.total_k_processed)'],
+        relatedFunctions: ['rate', 'rate_sum']
+    },
+    {
+        name: 'rate_sum',
+        category: 'Statistical',
+        description: 'Returns the summed rates for time series associated with an accumulating counter metric.',
+        signature: 'rate_sum(<field>)',
+        returnType: 'number',
+        examples: ['rate_sum(spl.mlog.thruput.total_k_processed)'],
+        relatedFunctions: ['rate', 'rate_avg']
+    },
+    // Multivalue Stats Functions
+    {
+        name: 'list',
+        category: 'Statistical',
+        description: 'Returns a list of up to 100 values in a field as a multivalue entry. Order reflects event order.',
+        signature: 'list(<field>)',
+        returnType: 'multivalue',
+        examples: ['list(action)', 'list(user)', 'list(status)'],
+        relatedFunctions: ['values', 'mvappend']
+    },
+    {
+        name: 'values',
+        category: 'Statistical',
+        description: 'Returns the list of all distinct values in a field as a multivalue entry. Order is lexicographical.',
+        signature: 'values(<field>)',
+        returnType: 'multivalue',
+        examples: ['values(host)', 'values(sourcetype)', 'values(action)'],
+        relatedFunctions: ['list', 'dc', 'distinct_count']
     }
 ];
 //# sourceMappingURL=spl-functions-database.js.map
