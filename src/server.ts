@@ -27,7 +27,7 @@ import * as yaml from 'yaml';
 import { SPL_COMMANDS, getSPLCommand } from './spl-commands-database';
 import { SPL_FUNCTIONS } from './spl-functions-database';
 import { getSPLCommandEnhanced } from './spl-commands-enhanced';
-import { validateSPLLine } from './spl-validation';
+import { validateSPLLine, normalizeSPLQuery } from './spl-validation';
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -320,20 +320,25 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 		
 		const lines = query.split('\n');
 
-		// Use enhanced validation for each line
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
+		// Normalize multiline SPL query - merge continuation lines
+		const normalizedCommands = normalizeSPLQuery(lines);
+		connection.console.log(`[Validation] Normalized ${lines.length} lines into ${normalizedCommands.length} commands`);
+
+		// Use enhanced validation for each normalized command
+		for (const cmd of normalizedCommands) {
+			const line = cmd.normalizedLine;
+			const lineNum = cmd.originalLineNumber;
 			
 			// Build set of variables available at this line (declared before this line)
 			const availableVariables = new Set<string>();
 			for (const [varName, declLine] of variables.entries()) {
-				if (declLine < i) {
+				if (declLine < lineNum) {
 					availableVariables.add(varName);
 				}
 			}
 			
 			// Pass the adjusted line number (query line + offset), character offset, and available variables
-			const lineDiagnostics = validateSPLLine(line, i + lineOffset, textDocument.uri, charOffset, availableVariables);
+			const lineDiagnostics = validateSPLLine(line, lineNum + lineOffset, textDocument.uri, charOffset, availableVariables);
 			diagnostics.push(...lineDiagnostics);
 		}
 	} catch (error) {

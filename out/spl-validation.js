@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateFunctionCall = validateFunctionCall;
 exports.extractFunctionCalls = extractFunctionCalls;
 exports.validateCommandArguments = validateCommandArguments;
+exports.normalizeSPLQuery = normalizeSPLQuery;
 exports.validateSPLLine = validateSPLLine;
 const node_1 = require("vscode-languageserver/node");
 const spl_commands_enhanced_1 = require("./spl-commands-enhanced");
@@ -259,6 +260,25 @@ function validateCommandArguments(commandName, argumentsStr, context, commandSta
     const charOffset = context.charOffset || 0;
     let startChar = commandStartPos !== undefined ? commandStartPos + charOffset : leadingWhitespace;
     let endChar = commandStartPos !== undefined ? commandStartPos + commandName.length + charOffset : context.line.length;
+    // SPL allows multiline commands - arguments can be on following lines
+    // Detect if this line might continue (command without args but line suggests continuation):
+    // - Command at end of line (nothing after command name)
+    // - Open bracket/parenthesis suggesting continuation
+    // - Command that commonly spans multiple lines
+    const mightContinueNextLine = !trimmedArgs || // No args on same line
+        context.line.trim().endsWith('[') || // Starts subsearch
+        context.line.trim().endsWith('('); // Starts grouped expression
+    // Commands that commonly/legitimately span multiple lines
+    const multilineCommands = new Set([
+        'chart', 'stats', 'timechart', 'eval', 'where', 'streamstats',
+        'eventstats', 'tstats', 'mstats', 'sistats', 'geostats', 'table',
+        'join', 'append', 'appendcols', 'case', 'if', 'validate'
+    ]);
+    // If command might continue on next line AND it's a command known for multiline usage,
+    // skip required argument validation (too many false positives)
+    if (mightContinueNextLine && multilineCommands.has(cmd.name.toLowerCase())) {
+        return diagnostics; // Don't validate - likely multiline
+    }
     // Check if required arguments are provided
     if (cmd.requiredArgs.length > 0 && !trimmedArgs) {
         diagnostics.push({
@@ -273,7 +293,7 @@ function validateCommandArguments(commandName, argumentsStr, context, commandSta
         return diagnostics;
     }
     // Validate specific argument patterns based on command type
-    if (cmd.requiredArgs.length > 0) {
+    if (cmd.requiredArgs.length > 0 && !multilineCommands.has(cmd.name.toLowerCase())) {
         // Check for basic presence of arguments
         const hasEquals = trimmedArgs.includes('=');
         const hasContent = trimmedArgs.length > 0;
@@ -398,13 +418,95 @@ function validateVariableUsage(line, context) {
         line.match(/\s+(?:AS|as)\s+\w+/)) {
         return diagnostics; // This line declares variables, don't validate references
     }
-    // For now, disable broad field validation entirely
-    // The false positive rate is too high with:
-    // - String literals containing underscores
-    // - External references (indexes, sourcetypes, lookups, macros)
-    // - Fields from search results that we can't track
-    // 
-    // Future enhancement: Parse and track fields from search, tstats, datamodel commands
+    // Extract field references from the line, excluding those inside strings
+    // Build a map of string ranges to exclude
+    const stringRanges = [];
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escapeNext = false;
+    let stringStart = -1;
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (escapeNext) {
+            escapeNext = false;
+            continue;
+        }
+        if (char === '\\') {
+            escapeNext = true;
+            continue;
+        }
+        if (char === '"' && !inSingleQuote) {
+            if (!inDoubleQuote) {
+                stringStart = i;
+                inDoubleQuote = true;
+            }
+            else {
+                stringRanges.push({ start: stringStart, end: i });
+                inDoubleQuote = false;
+            }
+            continue;
+        }
+        if (char === "'" && !inDoubleQuote) {
+            if (!inSingleQuote) {
+                stringStart = i;
+                inSingleQuote = true;
+            }
+            else {
+                stringRanges.push({ start: stringStart, end: i });
+                inSingleQuote = false;
+            }
+            continue;
+        }
+    }
+    // Helper to check if a position is inside a string
+    const isInsideString = (pos) => {
+        return stringRanges.some(range => pos >= range.start && pos <= range.end);
+    };
+    // Extract potential field references (simplified - excludes keywords and function names)
+    const fieldPattern = /\b([a-z_][a-z0-9_]*)\b/gi;
+    const matches = [...line.matchAll(fieldPattern)];
+    // SPL keywords and built-in fields to exclude
+    const keywords = new Set([
+        'eval', 'where', 'stats', 'by', 'as', 'and', 'or', 'not', 'in',
+        'true', 'false', 'null', 'if', 'case', 'span', 'count', 'sum', 'avg',
+        'max', 'min', 'values', 'list', 'dc', 'earliest', 'latest',
+        '_time', '_raw', 'index', 'sourcetype', 'host', 'source'
+    ]);
+    const checkedFields = new Set();
+    for (const match of matches) {
+        const fieldName = match[1];
+        const position = match.index || 0;
+        // Skip if inside a string literal
+        if (isInsideString(position)) {
+            continue;
+        }
+        // Skip if already checked, is a keyword, or is a known function
+        if (checkedFields.has(fieldName) || keywords.has(fieldName.toLowerCase())) {
+            continue;
+        }
+        // Check if it's a function name (has opening paren right after)
+        const afterMatch = line.substring(position + fieldName.length);
+        if (afterMatch.trimStart().startsWith('(')) {
+            continue; // It's a function call, not a field reference
+        }
+        // Check if field is available (declared before this line)
+        if (!context.availableVariables.has(fieldName)) {
+            // Field is not in our tracked variables
+            // Only warn about fields that look like user-defined (contain underscore or mixed case)
+            if (fieldName.includes('_') || fieldName !== fieldName.toLowerCase()) {
+                diagnostics.push({
+                    severity: node_1.DiagnosticSeverity.Warning,
+                    range: {
+                        start: { line: context.lineNumber, character: position + (context.charOffset || 0) },
+                        end: { line: context.lineNumber, character: position + fieldName.length + (context.charOffset || 0) }
+                    },
+                    message: `Field '${fieldName}' may not be defined yet. Ensure it is created before this line using eval, rename, rex, stats, or spath.`,
+                    source: 'spl-validation'
+                });
+            }
+        }
+        checkedFields.add(fieldName);
+    }
     return diagnostics;
 }
 /**
@@ -449,6 +551,121 @@ function splitByPipes(line) {
     // Add the last part
     parts.push(currentPart);
     return parts;
+}
+/**
+ * Normalize multiline SPL queries by merging continuation lines
+ *
+ * SPL allows line breaks between tokens. This function identifies command boundaries
+ * (lines starting with |) and merges continuation lines into their parent command.
+ *
+ * Example:
+ *   | chart
+ *       sum(bytes) as total,
+ *       avg(duration) as avg_dur
+ *     over user
+ *
+ * Becomes:
+ *   | chart sum(bytes) as total, avg(duration) as avg_dur over user
+ *
+ * @param lines Array of query lines
+ * @returns Array of {normalizedLine, originalLineNumber, originalLines} objects
+ */
+function normalizeSPLQuery(lines) {
+    const normalized = [];
+    let currentCommand = '';
+    let currentStartLine = 0;
+    let currentLineNumbers = [];
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escapeNext = false;
+    let bracketDepth = 0; // Track subsearch brackets [ ]
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        // Skip empty lines and comments
+        if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//') || trimmed.startsWith('```')) {
+            if (currentCommand) {
+                // Empty line might signal end of command
+                normalized.push({
+                    normalizedLine: currentCommand.trim(),
+                    originalLineNumber: currentStartLine,
+                    originalLines: [...currentLineNumbers]
+                });
+                currentCommand = '';
+                currentLineNumbers = [];
+            }
+            continue;
+        }
+        // Track quote and bracket state for this line
+        for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            if (escapeNext) {
+                escapeNext = false;
+                continue;
+            }
+            if (char === '\\') {
+                escapeNext = true;
+                continue;
+            }
+            // Track quotes
+            if (char === '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+            }
+            else if (char === "'" && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+            }
+            // Track subsearch brackets (only outside strings)
+            if (!inSingleQuote && !inDoubleQuote) {
+                if (char === '[')
+                    bracketDepth++;
+                else if (char === ']')
+                    bracketDepth--;
+            }
+        }
+        // Check if this line starts a new command (begins with | outside strings/brackets)
+        const startsWithPipe = trimmed.startsWith('|') && !inSingleQuote && !inDoubleQuote && bracketDepth === 0;
+        if (startsWithPipe) {
+            // New command - save previous if exists
+            if (currentCommand) {
+                normalized.push({
+                    normalizedLine: currentCommand.trim(),
+                    originalLineNumber: currentStartLine,
+                    originalLines: [...currentLineNumbers]
+                });
+            }
+            // Start new command
+            currentCommand = trimmed;
+            currentStartLine = i;
+            currentLineNumbers = [i];
+        }
+        else {
+            // Continuation line - merge with current command
+            if (currentCommand) {
+                // Add space if needed (unless line starts with punctuation like comma)
+                const needsSpace = !currentCommand.endsWith(' ') &&
+                    !trimmed.startsWith(',') &&
+                    !trimmed.startsWith(')') &&
+                    !currentCommand.endsWith('(');
+                currentCommand += (needsSpace ? ' ' : '') + trimmed;
+                currentLineNumbers.push(i);
+            }
+            else {
+                // First line doesn't start with | (e.g., search command)
+                currentCommand = trimmed;
+                currentStartLine = i;
+                currentLineNumbers = [i];
+            }
+        }
+    }
+    // Don't forget the last command
+    if (currentCommand) {
+        normalized.push({
+            normalizedLine: currentCommand.trim(),
+            originalLineNumber: currentStartLine,
+            originalLines: [...currentLineNumbers]
+        });
+    }
+    return normalized;
 }
 function validateSPLLine(line, lineNumber, documentUri, charOffset = 0, availableVariables) {
     const diagnostics = [];

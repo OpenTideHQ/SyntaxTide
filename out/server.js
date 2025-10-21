@@ -279,18 +279,22 @@ async function validateTextDocument(textDocument) {
         const variables = extractVariablesFromQuery(query);
         documentVariables.set(textDocument.uri, variables);
         const lines = query.split('\n');
-        // Use enhanced validation for each line
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
+        // Normalize multiline SPL query - merge continuation lines
+        const normalizedCommands = (0, spl_validation_1.normalizeSPLQuery)(lines);
+        connection.console.log(`[Validation] Normalized ${lines.length} lines into ${normalizedCommands.length} commands`);
+        // Use enhanced validation for each normalized command
+        for (const cmd of normalizedCommands) {
+            const line = cmd.normalizedLine;
+            const lineNum = cmd.originalLineNumber;
             // Build set of variables available at this line (declared before this line)
             const availableVariables = new Set();
             for (const [varName, declLine] of variables.entries()) {
-                if (declLine < i) {
+                if (declLine < lineNum) {
                     availableVariables.add(varName);
                 }
             }
             // Pass the adjusted line number (query line + offset), character offset, and available variables
-            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, i + lineOffset, textDocument.uri, charOffset, availableVariables);
+            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, lineNum + lineOffset, textDocument.uri, charOffset, availableVariables);
             diagnostics.push(...lineDiagnostics);
         }
     }
