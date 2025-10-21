@@ -26,6 +26,8 @@ import * as yaml from 'yaml';
 
 import { SPL_COMMANDS, getSPLCommand } from './spl-commands-database';
 import { SPL_FUNCTIONS } from './spl-functions-database';
+import { getSPLCommandEnhanced } from './spl-commands-enhanced';
+import { validateSPLLine } from './spl-validation';
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -284,37 +286,11 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 		
 		const lines = query.split('\n');
 
+		// Use enhanced validation for each line
 		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i].trim();
-			
-			// Skip empty lines and comments
-			if (!line || line.startsWith('#')) {
-				continue;
-			}
-
-			// Check for pipe commands
-			if (line.includes('|')) {
-				const pipes = line.split('|');
-				for (let j = 1; j < pipes.length; j++) {
-					const commandPart = pipes[j].trim();
-					const commandName = commandPart.split(/\s+/)[0];
-					
-					const cmd = getSPLCommand(commandName);
-					if (!cmd && commandName.length > 0) {
-						// Unknown command - create diagnostic
-						const diagnostic: Diagnostic = {
-							severity: DiagnosticSeverity.Error,
-							range: {
-								start: { line: i, character: 0 },
-								end: { line: i, character: line.length }
-							},
-							message: `Unknown SPL command: '${commandName}'. Check command spelling or refer to SPL documentation.`,
-							source: 'spl-lsp'
-						};
-						diagnostics.push(diagnostic);
-					}
-				}
-			}
+			const line = lines[i];
+			const lineDiagnostics = validateSPLLine(line, i, textDocument.uri);
+			diagnostics.push(...lineDiagnostics);
 		}
 	} catch (error) {
 		// YAML parsing errors are handled by the YAML extension

@@ -43,6 +43,7 @@ const vscode_languageserver_textdocument_1 = require("vscode-languageserver-text
 const yaml = __importStar(require("yaml"));
 const spl_commands_database_1 = require("./spl-commands-database");
 const spl_functions_database_1 = require("./spl-functions-database");
+const spl_validation_1 = require("./spl-validation");
 // Create a connection for the server
 const connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
 // Document-specific variable tracking
@@ -255,34 +256,11 @@ async function validateTextDocument(textDocument) {
         const variables = extractVariablesFromQuery(query);
         documentVariables.set(textDocument.uri, variables);
         const lines = query.split('\n');
+        // Use enhanced validation for each line
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            // Skip empty lines and comments
-            if (!line || line.startsWith('#')) {
-                continue;
-            }
-            // Check for pipe commands
-            if (line.includes('|')) {
-                const pipes = line.split('|');
-                for (let j = 1; j < pipes.length; j++) {
-                    const commandPart = pipes[j].trim();
-                    const commandName = commandPart.split(/\s+/)[0];
-                    const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
-                    if (!cmd && commandName.length > 0) {
-                        // Unknown command - create diagnostic
-                        const diagnostic = {
-                            severity: node_1.DiagnosticSeverity.Error,
-                            range: {
-                                start: { line: i, character: 0 },
-                                end: { line: i, character: line.length }
-                            },
-                            message: `Unknown SPL command: '${commandName}'. Check command spelling or refer to SPL documentation.`,
-                            source: 'spl-lsp'
-                        };
-                        diagnostics.push(diagnostic);
-                    }
-                }
-            }
+            const line = lines[i];
+            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, i, textDocument.uri);
+            diagnostics.push(...lineDiagnostics);
         }
     }
     catch (error) {
