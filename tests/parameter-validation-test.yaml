@@ -70,7 +70,7 @@ configurations:
       | inputlookup threat_intel.csv
       
       # Test 18: inputlookup with WHERE clause
-      | inputlookup  user_data.csv WHERE department="Engineering"
+      | inputlookup append=true WHERE department="Engineering" user_data.csv 
       
       # Test 19: inputlookup with options
       | inputlookup append=true strict=false users.csv

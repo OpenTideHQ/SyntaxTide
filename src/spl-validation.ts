@@ -561,11 +561,29 @@ function validateVariableUsage(line: string, context: ValidationContext): Diagno
 	// For inputlookup/outputlookup, identify the lookup table name to skip
 	let lookupTableName: string | null = null;
 	if (isInputOutputLookup) {
-		// Extract the first token after inputlookup/outputlookup that's not a parameter or keyword
-		// Format: | inputlookup [options] <table_name> [WHERE ...]
-		const lookupMatch = line.match(/\|\s*(?:input|output)lookup\s+(?:(?:\w+=\S+)\s+)*?([a-z_][a-z0-9_]*(?:\.csv)?)/i);
-		if (lookupMatch) {
-			lookupTableName = lookupMatch[1].replace(/\.csv$/i, ''); // Strip .csv if present
+		// Extract the filename - it can be before or after WHERE
+		// Syntax: inputlookup [options] [WHERE <search>] <filename>
+		// So filename is: first non-parameter token before WHERE, OR first non-parameter token after WHERE
+		const afterCommand = line.replace(/\|\s*(?:input|output)lookup\s+/i, '');
+		const tokens = afterCommand.split(/\s+/);
+		
+		let whereFound = false;
+		for (const token of tokens) {
+			// Track WHERE keyword
+			if (token.toUpperCase() === 'WHERE') {
+				whereFound = true;
+				continue;
+			}
+			
+			// Skip named parameters
+			if (token.includes('=')) continue;
+			
+			// If we haven't found WHERE yet, this could be the filename
+			// If we just passed WHERE, the next non-parameter is the filename
+			if (!whereFound || (whereFound && !lookupTableName)) {
+				lookupTableName = token.replace(/\.csv$/i, ''); // Strip .csv if present
+				break; // Found the filename
+			}
 		}
 	}
 	

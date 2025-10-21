@@ -107,10 +107,50 @@ function parseCommandParameters(commandLine, parameterDefs) {
     // Skip the command name itself (first token)
     if (tokens.length === 0)
         return parsedParams;
+    const commandName = tokens[0].toLowerCase();
     let position = commandLine.indexOf(tokens[0]) + tokens[0].length;
+    // For inputlookup/outputlookup, we need to identify the filename (any non-parameter token)
+    // but still parse WHERE as a clause. The filename can come before or after WHERE.
+    const isLookupCommand = ['inputlookup', 'outputlookup'].includes(commandName);
+    let whereEncountered = false;
     for (let i = 1; i < tokens.length; i++) {
         const token = tokens[i];
         position = commandLine.indexOf(token, position);
+        // Check if this is WHERE keyword
+        if (token.toUpperCase() === 'WHERE') {
+            whereEncountered = true;
+            // Add WHERE as a clause keyword
+            const matchingDef = parameterDefs.find(p => p.syntax.toUpperCase().includes('WHERE') &&
+                p.type === spl_parameter_types_1.ParameterType.CLAUSE);
+            parsedParams.push({
+                name: token,
+                type: 'clause',
+                startPos: position,
+                endPos: position + token.length,
+                matched: !!matchingDef,
+                definition: matchingDef
+            });
+            position += token.length;
+            continue; // Continue parsing - filename might come after WHERE
+        }
+        // For lookup commands, after WHERE, only parse the filename (first non-parameter token)
+        // Everything else is part of the search expression
+        if (isLookupCommand && whereEncountered) {
+            // If this is not a named parameter, it must be the filename
+            if (!isNamedParameter(token)) {
+                const filenameDef = parameterDefs.find(p => p.name === 'filename');
+                parsedParams.push({
+                    name: token,
+                    type: 'positional',
+                    startPos: position,
+                    endPos: position + token.length,
+                    matched: !!filenameDef,
+                    definition: filenameDef
+                });
+                position += token.length;
+                break; // Stop - everything after filename is part of search expression
+            }
+        }
         // Named parameter (key=value)
         if (isNamedParameter(token)) {
             const [key, value] = token.split('=', 2);
@@ -140,17 +180,32 @@ function parseCommandParameters(commandLine, parameterDefs) {
         }
         // Field or positional parameter
         else {
-            // Try to match against field or positional definitions
-            const matchingDef = parameterDefs.find(p => (p.type === spl_parameter_types_1.ParameterType.FIELD || p.type === spl_parameter_types_1.ParameterType.POSITIONAL) &&
-                !parsedParams.find(pp => pp.definition?.name === p.name));
-            parsedParams.push({
-                name: token,
-                type: matchingDef?.type === spl_parameter_types_1.ParameterType.FIELD ? 'field' : 'positional',
-                startPos: position,
-                endPos: position + token.length,
-                matched: !!matchingDef,
-                definition: matchingDef
-            });
+            // Special handling for inputlookup/outputlookup: any non-parameter token (before WHERE) is the filename
+            if (isLookupCommand && !whereEncountered) {
+                // This is the filename for inputlookup/outputlookup
+                const filenameDef = parameterDefs.find(p => p.name === 'filename');
+                parsedParams.push({
+                    name: token,
+                    type: 'positional',
+                    startPos: position,
+                    endPos: position + token.length,
+                    matched: !!filenameDef,
+                    definition: filenameDef
+                });
+            }
+            else {
+                // Try to match against field or positional definitions
+                const matchingDef = parameterDefs.find(p => (p.type === spl_parameter_types_1.ParameterType.FIELD || p.type === spl_parameter_types_1.ParameterType.POSITIONAL) &&
+                    !parsedParams.find(pp => pp.definition?.name === p.name));
+                parsedParams.push({
+                    name: token,
+                    type: matchingDef?.type === spl_parameter_types_1.ParameterType.FIELD ? 'field' : 'positional',
+                    startPos: position,
+                    endPos: position + token.length,
+                    matched: !!matchingDef,
+                    definition: matchingDef
+                });
+            }
         }
         position += token.length;
     }
