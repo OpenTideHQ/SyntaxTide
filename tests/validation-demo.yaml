@@ -1,0 +1,45 @@
+---
+# Quick Validation Demo
+# This file demonstrates the advanced validation features
+
+name: "Validation Demo"
+description: "Shows validation errors and correct usage"
+
+configurations:
+  splunk:
+    query: |
+      # Example 1: Correct usage - no errors
+      index=main sourcetype=access_combined
+      | stats count by status
+      | eval score=if(count > 100, "high", "low")
+      | accum count AS total
+      
+      # Example 2: Missing required argument
+      # Uncomment to see error:
+      # | accum
+      # Expected error: "Command 'accum' requires 1 argument: field"
+      
+      # Example 3: Invalid argument type
+      # Uncomment to see error:
+      # | abstract maxlines="not_a_number"
+      # Expected error: "Argument 'maxlines' expects a number"
+      
+      # Example 4: Function with too few parameters
+      # Uncomment to see error:
+      # | eval result=if(status==200)
+      # Expected error: "Function 'if()' requires at least 3 parameters"
+      
+      # Example 5: Function with correct parameters - no errors
+      | eval result=if(status==200, "success", "failure")
+      | eval rounded=round(response_time, 2)
+      | eval first_valid=coalesce(field1, field2, "default")
+      
+      # Example 6: Unknown command
+      # Uncomment to see error:
+      # | invalidcommand field
+      # Expected error: "Unknown SPL command: 'invalidcommand'"
+      
+      # Example 7: Hover over 'abstract' to see detailed argument info
+      | abstract maxlines=10 maxterms=50
+      
+---
