@@ -36,7 +36,7 @@ exports.SPL_FUNCTIONS = [
         name: 'coalesce',
         category: 'Comparison & Conditional',
         description: 'Returns the first value that is not null. Accepts any number of arguments.',
-        signature: 'coalesce(<value1>, <value2>, ...)',
+        signature: 'coalesce(<values>...)',
         returnType: 'any',
         examples: [
             'coalesce(field1, field2, "default")',
@@ -60,7 +60,7 @@ exports.SPL_FUNCTIONS = [
         name: 'in',
         category: 'Comparison & Conditional',
         description: 'Returns TRUE if the value of <field> matches any of the provided values. Takes a variadic list of comma-separated values to check against.',
-        signature: 'in(<field>, <value1>, <value2>, ...)',
+        signature: 'in(<field>, <values>...)',
         returnType: 'boolean',
         examples: [
             'in(status, "200", "201", "204")',
@@ -269,25 +269,25 @@ exports.SPL_FUNCTIONS = [
         name: 'avg',
         category: 'Statistical',
         description: 'Returns the average of the values (eval context). Accepts any number of numeric arguments.',
-        signature: 'avg(<value1>, <value2>, ...)',
+        signature: 'avg(<values>...)',
         returnType: 'number',
-        examples: ['avg(value1, value2, value3)'],
+        examples: ['avg(value1, value2, value3)', 'avg(field1, field2)'],
         relatedFunctions: ['sum', 'max', 'min']
     },
     {
         name: 'max',
         category: 'Statistical',
         description: 'Returns the maximum value (eval context). Accepts any number of numeric arguments.',
-        signature: 'max(<value1>, <value2>, ...)',
+        signature: 'max(<values>...)',
         returnType: 'number',
-        examples: ['max(value1, value2, value3)'],
+        examples: ['max(value1, value2, value3)', 'max(field1, field2)'],
         relatedFunctions: ['min', 'avg']
     },
     {
         name: 'min',
         category: 'Statistical',
         description: 'Returns the minimum value (eval context). Accepts any number of numeric arguments.',
-        signature: 'min(<value1>, <value2>, ...)',
+        signature: 'min(<values>...)',
         returnType: 'number',
         examples: ['min(value1, value2, value3)'],
         relatedFunctions: ['max', 'avg']
@@ -397,7 +397,7 @@ exports.SPL_FUNCTIONS = [
         name: 'mvappend',
         category: 'Multivalue',
         description: 'Combines the values of multiple fields into a multivalue field. Accepts any number of arguments.',
-        signature: 'mvappend(<value1>, <value2>, ...)',
+        signature: 'mvappend(<values>...)',
         returnType: 'multivalue',
         examples: ['mvappend(field1, field2, field3)'],
         relatedFunctions: ['mvjoin', 'split']
@@ -634,7 +634,7 @@ exports.SPL_FUNCTIONS = [
         name: 'printf',
         category: 'Conversion',
         description: 'Formats values using printf-style formatting with variadic arguments.',
-        signature: 'printf(<format>, <arg1>, <arg2>, ...)',
+        signature: 'printf(<format>, <arguments>...)',
         returnType: 'string',
         examples: ['printf("%d items", count)', 'printf("%.2f", value)', 'printf("%s: %d", name, total)'],
         relatedFunctions: ['tostring']
@@ -881,7 +881,7 @@ exports.SPL_FUNCTIONS = [
         name: 'json_object',
         category: 'JSON',
         description: 'Creates a JSON object from key-value pairs.',
-        signature: 'json_object(<key1>, <value1>, <key2>, <value2>, ...)',
+        signature: 'json_object(<key>, <value>...)',
         returnType: 'string',
         examples: ['json_object("name", user, "id", userid)', 'eval json=json_object("status", "active", "count", cnt)'],
         relatedFunctions: ['json_array', 'spath']
@@ -890,7 +890,7 @@ exports.SPL_FUNCTIONS = [
         name: 'json_array',
         category: 'JSON',
         description: 'Creates a JSON array from values.',
-        signature: 'json_array(<value1>, <value2>, ...)',
+        signature: 'json_array(<values>...)',
         returnType: 'string',
         examples: ['json_array(val1, val2, val3)', 'eval array=json_array("red", "green", "blue")'],
         relatedFunctions: ['json_object', 'spath']

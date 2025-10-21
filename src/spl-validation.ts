@@ -44,20 +44,20 @@ function parseFunctionSignature(signature: string): {
 		return { minParams: 0, maxParams: 0, isVariadic: false, paramNames: [] };
 	}
 
-	// Check for grouped variadic pattern FIRST: entire signature like "(<p1>, <p2>)..."
-	// This matches: validate(<condition>, <value>)... or case(<condition>, <value>)...
-	const groupedVariadicMatch = paramsStr.match(/^\((.+)\)\.\.\.$/);
-	if (groupedVariadicMatch) {
-		// Count parameters in the group
-		const groupContent = groupedVariadicMatch[1];
-		const groupParams = groupContent.split(',').map(p => p.trim());
-		const minParams = groupParams.length; // At least one complete group required
+	// Check for grouped variadic pattern: ENTIRE signature ends with )...
+	// Examples: validate(<condition>, <value>)... or case(<condition>, <value>)...
+	// The signature format is: functionName(<params>)...
+	if (signature.endsWith(')...')) {
+		// This is a grouped variadic function
+		// Count the number of parameters in the group
+		const params = paramsStr.split(',').map(p => p.trim()).filter(p => p.length > 0);
+		const minParams = params.length; // At least one complete group required
 		
 		return {
 			minParams,
 			maxParams: Infinity,
 			isVariadic: true,
-			paramNames: groupParams
+			paramNames: params
 		};
 	}
 
@@ -79,6 +79,13 @@ function parseFunctionSignature(signature: string): {
 	}
 	if (currentParam.trim()) {
 		params.push(currentParam.trim());
+	}
+	
+	// Fix for standalone "..." - merge with previous parameter
+	// in(<field>, <value1>, <value2>, ...) should be 3 params, not 4
+	if (params.length > 1 && params[params.length - 1] === '...') {
+		const variadicMarker = params.pop();
+		params[params.length - 1] = params[params.length - 1] + variadicMarker;
 	}
 
 	let minParams = 0;
@@ -133,7 +140,8 @@ function parseFunctionSignature(signature: string): {
 export function validateFunctionCall(
 	functionName: string,
 	args: string[],
-	context: ValidationContext
+	context: ValidationContext,
+	startPos?: number
 ): Diagnostic[] {
 	const diagnostics: Diagnostic[] = [];
 	
@@ -145,13 +153,34 @@ export function validateFunctionCall(
 	const sigInfo = parseFunctionSignature(func.signature);
 	const argCount = args.length;
 
+	// Calculate proper character range for highlighting
+	// startPos is already the correct position in the line (includes YAML indentation)
+	let startChar = 0;
+	let endChar = context.line.length;
+	
+	if (startPos !== undefined) {
+		// Use the startPos directly - it's already correct from extractFunctionCalls
+		startChar = startPos;
+		// Highlight function name + opening paren (visual cue)
+		endChar = startPos + functionName.length + 1;
+		
+		// Debug logging
+		console.log(`[validateFunctionCall] Function: ${functionName}, startPos: ${startPos}, startChar: ${startChar}, endChar: ${endChar}`);
+		console.log(`[validateFunctionCall] Line: "${context.line}"`);
+		console.log(`[validateFunctionCall] Highlighted text: "${context.line.substring(startChar, endChar)}"`);
+	} else {
+		// Fallback: get the leading whitespace if startPos not provided
+		const leadingWhitespace = context.line.match(/^\s*/)?.[0].length || 0;
+		startChar = leadingWhitespace;
+	}
+
 	// Check parameter count
 	if (argCount < sigInfo.minParams) {
 		diagnostics.push({
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: context.lineNumber, character: 0 },
-				end: { line: context.lineNumber, character: context.line.length }
+				start: { line: context.lineNumber, character: startChar },
+				end: { line: context.lineNumber, character: endChar }
 			},
 			message: `Function '${func.name}()' requires at least ${sigInfo.minParams} parameter${sigInfo.minParams !== 1 ? 's' : ''}, but got ${argCount}.`,
 			source: 'spl-validation'
@@ -160,8 +189,8 @@ export function validateFunctionCall(
 		diagnostics.push({
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: context.lineNumber, character: 0 },
-				end: { line: context.lineNumber, character: context.line.length }
+				start: { line: context.lineNumber, character: startChar },
+				end: { line: context.lineNumber, character: endChar }
 			},
 			message: `Function '${func.name}()' accepts at most ${sigInfo.maxParams} parameter${sigInfo.maxParams !== 1 ? 's' : ''}, but got ${argCount}.`,
 			source: 'spl-validation'
@@ -264,7 +293,8 @@ function splitFunctionArgs(argsStr: string): string[] {
 export function validateCommandArguments(
 	commandName: string,
 	argumentsStr: string,
-	context: ValidationContext
+	context: ValidationContext,
+	commandStartPos?: number
 ): Diagnostic[] {
 	const diagnostics: Diagnostic[] = [];
 	
@@ -280,13 +310,18 @@ export function validateCommandArguments(
 
 	const trimmedArgs = argumentsStr.trim();
 	
+	// Calculate proper character range for highlighting
+	const leadingWhitespace = context.line.match(/^\s*/)?.[0].length || 0;
+	let startChar = commandStartPos !== undefined ? commandStartPos : leadingWhitespace;
+	let endChar = commandStartPos !== undefined ? commandStartPos + commandName.length : context.line.length;
+	
 	// Check if required arguments are provided
 	if (cmd.requiredArgs.length > 0 && !trimmedArgs) {
 		diagnostics.push({
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: { line: context.lineNumber, character: 0 },
-				end: { line: context.lineNumber, character: context.line.length }
+				start: { line: context.lineNumber, character: startChar },
+				end: { line: context.lineNumber, character: endChar }
 			},
 			message: `Command '${cmd.name}' requires ${cmd.requiredArgs.length} argument${cmd.requiredArgs.length !== 1 ? 's' : ''}: ${cmd.requiredArgs.map(a => a.name).join(', ')}.`,
 			source: 'spl-validation'
@@ -306,8 +341,8 @@ export function validateCommandArguments(
 			diagnostics.push({
 				severity: DiagnosticSeverity.Error,
 				range: {
-					start: { line: context.lineNumber, character: 0 },
-					end: { line: context.lineNumber, character: context.line.length }
+					start: { line: context.lineNumber, character: startChar },
+					end: { line: context.lineNumber, character: endChar }
 				},
 				message: `Command '${cmd.name}' requires arguments: ${requiredArgNames}.`,
 				source: 'spl-validation'
@@ -327,12 +362,16 @@ export function validateCommandArguments(
 		);
 		
 		if (!argDef) {
-			// Unknown argument
+			// Unknown argument - highlight the argument name itself
+			const argPos = context.line.indexOf(argName);
+			const argStart = argPos >= 0 ? argPos : startChar;
+			const argEnd = argStart + argName.length;
+			
 			diagnostics.push({
 				severity: DiagnosticSeverity.Warning,
 				range: {
-					start: { line: context.lineNumber, character: 0 },
-					end: { line: context.lineNumber, character: context.line.length }
+					start: { line: context.lineNumber, character: argStart },
+					end: { line: context.lineNumber, character: argEnd }
 				},
 				message: `Unknown argument '${argName}' for command '${cmd.name}'. Valid arguments: ${[...cmd.requiredArgs, ...cmd.optionalArgs].map(a => a.name).join(', ')}.`,
 				source: 'spl-validation'
@@ -414,14 +453,20 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 			const commandName = parts[0];
 			const argumentsStr = commandPart.substring(commandName.length).trim();
 			
+			// Find the command position in the original line for accurate highlighting
+			const leadingWhitespace = line.match(/^\s*/)?.[0].length || 0;
+			const commandPos = line.indexOf(commandName, leadingWhitespace);
+			const commandStart = commandPos >= 0 ? commandPos : leadingWhitespace;
+			const commandEnd = commandStart + commandName.length;
+			
 			// First check if command exists at all (in basic database)
 			const basicCmd = getSPLCommand(commandName);
 			if (!basicCmd) {
 				diagnostics.push({
 					severity: DiagnosticSeverity.Error,
 					range: {
-						start: { line: lineNumber, character: 0 },
-						end: { line: lineNumber, character: line.length }
+						start: { line: lineNumber, character: commandStart },
+						end: { line: lineNumber, character: commandEnd }
 					},
 					message: `Unknown SPL command: '${commandName}'. Check command spelling or refer to SPL documentation.`,
 					source: 'spl-validation'
@@ -432,18 +477,19 @@ export function validateSPLLine(line: string, lineNumber: number, documentUri: s
 			// If command exists in enhanced database, do detailed argument validation
 			const enhancedCmd = getSPLCommandEnhanced(commandName);
 			if (enhancedCmd) {
-				// Validate command arguments with enhanced metadata
-				const argDiags = validateCommandArguments(commandName, argumentsStr, context);
+				// Validate command arguments with enhanced metadata, passing command position
+				const argDiags = validateCommandArguments(commandName, argumentsStr, context, commandStart);
 				diagnostics.push(...argDiags);
 			}
 			// If not in enhanced database, command is valid but we skip detailed validation
 		}
 	}
 	
-	// Extract and validate function calls
-	const functionCalls = extractFunctionCalls(trimmed);
+	// Extract and validate function calls (use original line for accurate positions)
+	const functionCalls = extractFunctionCalls(line);
 	for (const funcCall of functionCalls) {
-		const funcDiags = validateFunctionCall(funcCall.name, funcCall.args, context);
+		// Pass the startPos to get accurate highlighting
+		const funcDiags = validateFunctionCall(funcCall.name, funcCall.args, context, funcCall.startPos);
 		diagnostics.push(...funcDiags);
 	}
 	
