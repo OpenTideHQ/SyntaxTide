@@ -43,6 +43,7 @@ const vscode_languageserver_textdocument_1 = require("vscode-languageserver-text
 const yaml = __importStar(require("yaml"));
 const spl_commands_database_1 = require("./spl-commands-database");
 const spl_functions_database_1 = require("./spl-functions-database");
+const spl_commands_enhanced_1 = require("./spl-commands-enhanced");
 const spl_validation_1 = require("./spl-validation");
 // Create a connection for the server
 const connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
@@ -337,28 +338,64 @@ connection.onCompletionResolve((item) => {
         return item;
     }
     else if (item.data < 1000) {
-        // It's a command
+        // It's a command - use enhanced database if available
         const cmd = spl_commands_database_1.SPL_COMMANDS[item.data];
         if (cmd) {
-            item.detail = `${cmd.type} - ${cmd.category}`;
-            item.documentation = {
-                kind: 'markdown',
-                value: [
-                    `**${cmd.name}**`,
-                    '',
-                    cmd.description,
-                    '',
-                    '**Syntax:**',
-                    '```spl',
-                    cmd.syntax,
-                    '```',
-                    '',
-                    '**Examples:**',
-                    ...(cmd.examples || []).map((ex) => `\`\`\`spl\n${ex}\n\`\`\``),
-                    '',
-                    `**Related Commands:** ${(cmd.relatedCommands || []).join(', ')}`
-                ].join('\n')
-            };
+            const cmdEnhanced = (0, spl_commands_enhanced_1.getSPLCommandEnhanced)(cmd.name);
+            if (cmdEnhanced) {
+                const reqArgs = cmdEnhanced.requiredArgs.length > 0
+                    ? ['', '**Required Arguments:**', ...cmdEnhanced.requiredArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}`)]
+                    : [];
+                const optArgs = cmdEnhanced.optionalArgs.length > 0
+                    ? ['', '**Optional Arguments:**', ...cmdEnhanced.optionalArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}${arg.default ? ` [default: ${arg.default}]` : ''}`)]
+                    : [];
+                item.detail = `${cmdEnhanced.type} - ${cmdEnhanced.category}`;
+                item.documentation = {
+                    kind: 'markdown',
+                    value: [
+                        `**${cmdEnhanced.name}**`,
+                        '',
+                        cmdEnhanced.description,
+                        '',
+                        '**Syntax:**',
+                        '```spl',
+                        cmdEnhanced.syntax,
+                        '```',
+                        ...reqArgs,
+                        ...optArgs,
+                        '',
+                        ...(cmdEnhanced.examples && cmdEnhanced.examples.length > 0
+                            ? ['**Examples:**', ...cmdEnhanced.examples.map((ex) => `\`\`\`spl\n${ex}\n\`\`\``)]
+                            : []),
+                        '',
+                        ...(cmdEnhanced.relatedCommands && cmdEnhanced.relatedCommands.length > 0
+                            ? [`**Related Commands:** ${cmdEnhanced.relatedCommands.join(', ')}`]
+                            : [])
+                    ].join('\n')
+                };
+            }
+            else {
+                // Fallback to basic command database
+                item.detail = `${cmd.type} - ${cmd.category}`;
+                item.documentation = {
+                    kind: 'markdown',
+                    value: [
+                        `**${cmd.name}**`,
+                        '',
+                        cmd.description,
+                        '',
+                        '**Syntax:**',
+                        '```spl',
+                        cmd.syntax,
+                        '```',
+                        '',
+                        '**Examples:**',
+                        ...(cmd.examples || []).map((ex) => `\`\`\`spl\n${ex}\n\`\`\``),
+                        '',
+                        `**Related Commands:** ${(cmd.relatedCommands || []).join(', ')}`
+                    ].join('\n')
+                };
+            }
         }
     }
     else {
@@ -426,7 +463,44 @@ connection.onHover((_textDocumentPosition) => {
             }
         };
     }
-    // Check if it's a command
+    // Check if it's a command - use enhanced database for better info
+    const cmdEnhanced = (0, spl_commands_enhanced_1.getSPLCommandEnhanced)(word);
+    if (cmdEnhanced) {
+        const reqArgs = cmdEnhanced.requiredArgs.length > 0
+            ? ['', '**Required Arguments:**', ...cmdEnhanced.requiredArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}`)]
+            : [];
+        const optArgs = cmdEnhanced.optionalArgs.length > 0
+            ? ['', '**Optional Arguments:**', ...cmdEnhanced.optionalArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}${arg.default ? ` [default: ${arg.default}]` : ''}`)]
+            : [];
+        return {
+            contents: {
+                kind: 'markdown',
+                value: [
+                    `**${cmdEnhanced.name}** (${cmdEnhanced.type})`,
+                    '',
+                    cmdEnhanced.description,
+                    '',
+                    '**Syntax:**',
+                    '```spl',
+                    cmdEnhanced.syntax,
+                    '```',
+                    ...reqArgs,
+                    ...optArgs,
+                    '',
+                    '**Category:** ' + cmdEnhanced.category,
+                    '',
+                    ...(cmdEnhanced.examples && cmdEnhanced.examples.length > 0
+                        ? ['**Examples:**', ...cmdEnhanced.examples.map((ex) => `\`\`\`spl\n${ex}\n\`\`\``)]
+                        : []),
+                    '',
+                    ...(cmdEnhanced.relatedCommands && cmdEnhanced.relatedCommands.length > 0
+                        ? [`**Related Commands:** ${cmdEnhanced.relatedCommands.join(', ')}`]
+                        : [])
+                ].join('\n')
+            }
+        };
+    }
+    // Fallback to basic command database
     const cmd = (0, spl_commands_database_1.getSPLCommand)(word);
     if (cmd) {
         return {

@@ -377,28 +377,70 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
 		// It's a user-defined variable - already has full info
 		return item;
 	} else if (item.data < 1000) {
-		// It's a command
+		// It's a command - use enhanced database if available
 		const cmd = SPL_COMMANDS[item.data];
 		if (cmd) {
-			item.detail = `${cmd.type} - ${cmd.category}`;
-			item.documentation = {
-				kind: 'markdown',
-				value: [
-					`**${cmd.name}**`,
-					'',
-					cmd.description,
-					'',
-					'**Syntax:**',
-					'```spl',
-					cmd.syntax,
-					'```',
-					'',
-					'**Examples:**',
-					...(cmd.examples || []).map((ex: string) => `\`\`\`spl\n${ex}\n\`\`\``),
-					'',
-					`**Related Commands:** ${(cmd.relatedCommands || []).join(', ')}`
-				].join('\n')
-			};
+			const cmdEnhanced = getSPLCommandEnhanced(cmd.name);
+			
+			if (cmdEnhanced) {
+				const reqArgs = cmdEnhanced.requiredArgs.length > 0 
+					? ['', '**Required Arguments:**', ...cmdEnhanced.requiredArgs.map(arg => 
+						`- \`${arg.name}\` (${arg.type}): ${arg.description}`
+					  )]
+					: [];
+				
+				const optArgs = cmdEnhanced.optionalArgs.length > 0
+					? ['', '**Optional Arguments:**', ...cmdEnhanced.optionalArgs.map(arg =>
+						`- \`${arg.name}\` (${arg.type}): ${arg.description}${arg.default ? ` [default: ${arg.default}]` : ''}`
+					  )]
+					: [];
+				
+				item.detail = `${cmdEnhanced.type} - ${cmdEnhanced.category}`;
+				item.documentation = {
+					kind: 'markdown',
+					value: [
+						`**${cmdEnhanced.name}**`,
+						'',
+						cmdEnhanced.description,
+						'',
+						'**Syntax:**',
+						'```spl',
+						cmdEnhanced.syntax,
+						'```',
+						...reqArgs,
+						...optArgs,
+						'',
+						...(cmdEnhanced.examples && cmdEnhanced.examples.length > 0
+							? ['**Examples:**', ...cmdEnhanced.examples.map((ex: string) => `\`\`\`spl\n${ex}\n\`\`\``)]
+							: []),
+						'',
+						...(cmdEnhanced.relatedCommands && cmdEnhanced.relatedCommands.length > 0
+							? [`**Related Commands:** ${cmdEnhanced.relatedCommands.join(', ')}`]
+							: [])
+					].join('\n')
+				};
+			} else {
+				// Fallback to basic command database
+				item.detail = `${cmd.type} - ${cmd.category}`;
+				item.documentation = {
+					kind: 'markdown',
+					value: [
+						`**${cmd.name}**`,
+						'',
+						cmd.description,
+						'',
+						'**Syntax:**',
+						'```spl',
+						cmd.syntax,
+						'```',
+						'',
+						'**Examples:**',
+						...(cmd.examples || []).map((ex: string) => `\`\`\`spl\n${ex}\n\`\`\``),
+						'',
+						`**Related Commands:** ${(cmd.relatedCommands || []).join(', ')}`
+					].join('\n')
+				};
+			}
 		}
 	} else {
 		// It's a function
@@ -472,7 +514,51 @@ connection.onHover(
 			};
 		}
 
-		// Check if it's a command
+		// Check if it's a command - use enhanced database for better info
+		const cmdEnhanced = getSPLCommandEnhanced(word);
+		if (cmdEnhanced) {
+			const reqArgs = cmdEnhanced.requiredArgs.length > 0 
+				? ['', '**Required Arguments:**', ...cmdEnhanced.requiredArgs.map(arg => 
+					`- \`${arg.name}\` (${arg.type}): ${arg.description}`
+				  )]
+				: [];
+			
+			const optArgs = cmdEnhanced.optionalArgs.length > 0
+				? ['', '**Optional Arguments:**', ...cmdEnhanced.optionalArgs.map(arg =>
+					`- \`${arg.name}\` (${arg.type}): ${arg.description}${arg.default ? ` [default: ${arg.default}]` : ''}`
+				  )]
+				: [];
+			
+			return {
+				contents: {
+					kind: 'markdown',
+					value: [
+						`**${cmdEnhanced.name}** (${cmdEnhanced.type})`,
+						'',
+						cmdEnhanced.description,
+						'',
+						'**Syntax:**',
+						'```spl',
+						cmdEnhanced.syntax,
+						'```',
+						...reqArgs,
+						...optArgs,
+						'',
+						'**Category:** ' + cmdEnhanced.category,
+						'',
+						...(cmdEnhanced.examples && cmdEnhanced.examples.length > 0
+							? ['**Examples:**', ...cmdEnhanced.examples.map((ex: string) => `\`\`\`spl\n${ex}\n\`\`\``)]
+							: []),
+						'',
+						...(cmdEnhanced.relatedCommands && cmdEnhanced.relatedCommands.length > 0
+							? [`**Related Commands:** ${cmdEnhanced.relatedCommands.join(', ')}`]
+							: [])
+					].join('\n')
+				}
+			};
+		}
+		
+		// Fallback to basic command database
 		const cmd = getSPLCommand(word);
 		if (cmd) {
 			return {
