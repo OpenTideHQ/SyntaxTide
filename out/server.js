@@ -134,20 +134,32 @@ function extractSPLQuery(yamlContent, fullText) {
             for (const platform of platforms) {
                 const config = doc.configurations[platform];
                 if (config && config.query) {
-                    // Calculate the line offset by finding where "query: |" appears
-                    const queryPattern = new RegExp(`${platform}:\\s*\\n\\s*query:\\s*\\|`, 'i');
+                    // Find the position of "query: |" under the specific platform
+                    const queryPattern = new RegExp(`${platform}:[\\s\\S]*?query:\\s*\\|`, 'i');
                     const match = fullText.match(queryPattern);
                     if (match) {
-                        // Count newlines up to the end of "query: |" to get the offset
+                        // Count lines up to the end of "query: |"
                         const matchEnd = (match.index || 0) + match[0].length;
-                        const offset = fullText.substring(0, matchEnd).split('\n').length;
+                        const textUpToMatch = fullText.substring(0, matchEnd);
+                        const linesUpToMatch = textUpToMatch.split('\n').length;
+                        // The query content starts on the next line after "query: |"
+                        const offset = linesUpToMatch + 1; // 1-based line number where query content starts
                         // Find the first non-empty query line to detect indentation
-                        const firstQueryLine = fullText.substring(matchEnd).split('\n')[1] || '';
-                        const indentChars = firstQueryLine.length - firstQueryLine.trimStart().length;
+                        const remainingText = fullText.substring(matchEnd);
+                        const nextLines = remainingText.split('\n');
+                        let indentChars = 0;
+                        // Find the first non-empty line after "query: |"
+                        for (const line of nextLines) {
+                            if (line.trim()) {
+                                indentChars = line.length - line.trimStart().length;
+                                break;
+                            }
+                        }
                         connection.console.log(`[Offset] Found query block at line ${offset} for platform ${platform}, indent: ${indentChars} chars`);
-                        return { query: config.query, offset, indentChars };
+                        return { query: config.query, offset: offset - 1, indentChars }; // Convert to 0-based
                     }
-                    // Fallback: count lines up to query content
+                    // Fallback: assume query starts at line 0
+                    connection.console.log(`[Offset] Could not find query pattern, using fallback offset 0`);
                     return { query: config.query, offset: 0, indentChars: 0 };
                 }
             }

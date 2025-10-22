@@ -527,8 +527,8 @@ function validateVariableUsage(line, context) {
         // Check if field is available (declared before this line)
         if (!context.availableVariables.has(fieldName)) {
             // Field is not in our tracked variables
-            // Only warn about fields that look like user-defined (contain underscore or mixed case)
-            if (fieldName.includes('_') || fieldName !== fieldName.toLowerCase()) {
+            // Only warn about fields that look like user-defined (contain underscores)
+            if (fieldName.includes('_')) {
                 diagnostics.push({
                     severity: node_1.DiagnosticSeverity.Warning,
                     range: {
