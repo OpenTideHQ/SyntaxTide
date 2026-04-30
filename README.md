@@ -1,3 +1,8 @@
+> [!WARNING]
+> This is currently a very early stage project, and we provide NO SUPPORT for now. 
+> The repo is planned for reimplementation and official announcement in coming months.
+> You may explore the work done and experiment, but no PR will be accepted.
+
 <table align="center"><tr><td align="center" width="9999">
 <img src="https://raw.githubusercontent.com/OpenTideHQ/SyntaxTide/refs/heads/main/syntaxtide-icon.png" align="center" width="150" alt="Project icon">
 
