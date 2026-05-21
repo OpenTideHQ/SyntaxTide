@@ -11,8 +11,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'case',
         category: 'Comparison & Conditional',
-        description: 'Returns the first value for which the condition evaluates to true. Similar to switch/case statements in other languages.',
-        signature: 'case(<condition>, <value>, ...)',
+        description: 'Returns the first value for which the condition evaluates to true. Similar to switch/case statements in other languages. Takes pairs of conditions and values.',
+        signature: 'case(<condition>, <value>)...',
         returnType: 'any',
         examples: [
             'case(status==200, "OK", status==404, "Not Found", status==500, "Error", true(), "Unknown")',
@@ -35,7 +35,7 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'coalesce',
         category: 'Comparison & Conditional',
-        description: 'Returns the first value that is not null.',
+        description: 'Returns the first value that is not null. Accepts any number of arguments.',
         signature: 'coalesce(<values>...)',
         returnType: 'any',
         examples: [
@@ -59,8 +59,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'in',
         category: 'Comparison & Conditional',
-        description: 'Returns TRUE if the value is in the list.',
-        signature: 'in(<field>, <list>)',
+        description: 'Returns TRUE if the value of <field> matches any of the provided values. Takes a variadic list of comma-separated values to check against.',
+        signature: 'in(<field>, <values>...)',
         returnType: 'boolean',
         examples: [
             'in(status, "200", "201", "204")',
@@ -122,8 +122,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'validate',
         category: 'Comparison & Conditional',
-        description: 'Similar to case(), but returns the condition value instead of a specified value.',
-        signature: 'validate(<condition>, <value>, ...)',
+        description: 'Similar to case(), but returns the condition value instead of a specified value. Takes pairs of conditions and values.',
+        signature: 'validate(<condition>, <value>)...',
         returnType: 'any',
         examples: ['validate(isnotnull(field), field, isnotnull(field2), field2)'],
         relatedFunctions: ['case', 'if']
@@ -177,10 +177,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'round',
         category: 'Mathematical',
-        description: 'Rounds a number to the specified number of decimal places.',
-        signature: 'round(<num>, <precision>)',
+        description: 'Rounds a number to the specified number of decimal places. The precision parameter is optional and defaults to 0.',
+        signature: 'round(<num>, [<precision>])',
         returnType: 'number',
-        examples: ['round(3.14159, 2)', 'round(value, 0)'],
+        examples: ['round(3.14159, 2)', 'round(value, 0)', 'round(value)'],
         relatedFunctions: ['ceiling', 'floor', 'sigfig']
     },
     {
@@ -231,10 +231,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'log',
         category: 'Mathematical',
-        description: 'Returns the logarithm of a number with the specified base.',
-        signature: 'log(<num>, <base>)',
+        description: 'Returns the logarithm of a number with the specified base. The base parameter is optional and defaults to 10.',
+        signature: 'log(<num>, [<base>])',
         returnType: 'number',
-        examples: ['log(100, 10)', 'log(value, 2)'],
+        examples: ['log(100, 10)', 'log(value, 2)', 'log(value)'],
         relatedFunctions: ['ln', 'exp']
     },
     {
@@ -255,29 +255,38 @@ exports.SPL_FUNCTIONS = [
         examples: ['exact(0.2) * 8.250'],
         relatedFunctions: ['round']
     },
+    {
+        name: 'sum',
+        category: 'Mathematical',
+        description: 'Returns the sum of all numeric arguments. Takes one or more numeric values.',
+        signature: 'sum(<num>...)',
+        returnType: 'number',
+        examples: ['sum(1, 2, 3, 4, 5)', 'sum(value1, value2, value3)', 'eval total=sum(price, tax, shipping)'],
+        relatedFunctions: ['avg', 'max', 'min']
+    },
     // Statistical Eval Functions
     {
         name: 'avg',
         category: 'Statistical',
-        description: 'Returns the average of the values (eval context).',
+        description: 'Returns the average of the values (eval context). Accepts any number of numeric arguments.',
         signature: 'avg(<values>...)',
         returnType: 'number',
-        examples: ['avg(value1, value2, value3)'],
+        examples: ['avg(value1, value2, value3)', 'avg(field1, field2)'],
         relatedFunctions: ['sum', 'max', 'min']
     },
     {
         name: 'max',
         category: 'Statistical',
-        description: 'Returns the maximum value (eval context).',
+        description: 'Returns the maximum value (eval context). Accepts any number of numeric arguments.',
         signature: 'max(<values>...)',
         returnType: 'number',
-        examples: ['max(value1, value2, value3)'],
+        examples: ['max(value1, value2, value3)', 'max(field1, field2)'],
         relatedFunctions: ['min', 'avg']
     },
     {
         name: 'min',
         category: 'Statistical',
-        description: 'Returns the minimum value (eval context).',
+        description: 'Returns the minimum value (eval context). Accepts any number of numeric arguments.',
         signature: 'min(<values>...)',
         returnType: 'number',
         examples: ['min(value1, value2, value3)'],
@@ -323,8 +332,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'substr',
         category: 'Text',
-        description: 'Returns a substring of a string.',
-        signature: 'substr(<str>, <start>, <length>)',
+        description: 'Returns a substring of a string. The length parameter is optional and defaults to extracting to the end of the string.',
+        signature: 'substr(<str>, <start>, [<length>])',
         returnType: 'string',
         examples: ['substr(message, 1, 10)', 'substr(field, 5)'],
         relatedFunctions: ['len', 'trim']
@@ -332,8 +341,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'trim',
         category: 'Text',
-        description: 'Removes leading and trailing characters from a string.',
-        signature: 'trim(<str>, <trim_chars>)',
+        description: 'Removes leading and trailing characters from a string. The <trim_chars> argument is optional and defaults to whitespace.',
+        signature: 'trim(<str>, [<trim_chars>])',
         returnType: 'string',
         examples: ['trim(field)', 'trim(field, " \\t")'],
         relatedFunctions: ['ltrim', 'rtrim']
@@ -341,8 +350,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'ltrim',
         category: 'Text',
-        description: 'Removes leading characters from a string.',
-        signature: 'ltrim(<str>, <trim_chars>)',
+        description: 'Removes leading characters from a string. The <trim_chars> argument is optional and defaults to whitespace.',
+        signature: 'ltrim(<str>, [<trim_chars>])',
         returnType: 'string',
         examples: ['ltrim(field)', 'ltrim(field, " ")'],
         relatedFunctions: ['trim', 'rtrim']
@@ -350,8 +359,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'rtrim',
         category: 'Text',
-        description: 'Removes trailing characters from a string.',
-        signature: 'rtrim(<str>, <trim_chars>)',
+        description: 'Removes trailing characters from a string. The <trim_chars> argument is optional and defaults to whitespace.',
+        signature: 'rtrim(<str>, [<trim_chars>])',
         returnType: 'string',
         examples: ['rtrim(field)', 'rtrim(field, " ")'],
         relatedFunctions: ['trim', 'ltrim']
@@ -368,10 +377,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'spath',
         category: 'Text',
-        description: 'Extracts values from XML or JSON formatted text.',
-        signature: 'spath(<value>, <path>)',
+        description: 'Extracts values from XML or JSON formatted text. The path argument is optional.',
+        signature: 'spath(<value>, [<path>])',
         returnType: 'string',
-        examples: ['spath(json_field, "path.to.value")'],
+        examples: ['spath(json_field, "path.to.value")', 'spath(json_field)'],
         relatedFunctions: ['json_extract']
     },
     {
@@ -387,7 +396,7 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvappend',
         category: 'Multivalue',
-        description: 'Combines the values of multiple fields into a multivalue field.',
+        description: 'Combines the values of multiple fields into a multivalue field. Accepts any number of arguments.',
         signature: 'mvappend(<values>...)',
         returnType: 'multivalue',
         examples: ['mvappend(field1, field2, field3)'],
@@ -432,8 +441,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvindex',
         category: 'Multivalue',
-        description: 'Returns values from a multivalue field at the specified indices.',
-        signature: 'mvindex(<mv>, <start>, <end>)',
+        description: 'Returns values from a multivalue field at the specified indices. The end parameter is optional.',
+        signature: 'mvindex(<mv>, <start>, [<end>])',
         returnType: 'multivalue',
         examples: ['mvindex(emails, 0)', 'mvindex(list, 2, 4)'],
         relatedFunctions: ['mvcount', 'mvfind']
@@ -459,8 +468,8 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvrange',
         category: 'Multivalue',
-        description: 'Creates a multivalue field with a range of numbers.',
-        signature: 'mvrange(<start>, <end>, <step>)',
+        description: 'Creates a multivalue field with a range of numbers. The step parameter is optional and defaults to 1.',
+        signature: 'mvrange(<start>, <end>, [<step>])',
         returnType: 'multivalue',
         examples: ['mvrange(0, 10, 2)', 'mvrange(1, 100)'],
         relatedFunctions: []
@@ -477,10 +486,10 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'mvzip',
         category: 'Multivalue',
-        description: 'Combines values from two multivalue fields.',
-        signature: 'mvzip(<mv_left>, <mv_right>, <delim>)',
+        description: 'Combines values from two multivalue fields. The delimiter parameter is optional and defaults to a comma.',
+        signature: 'mvzip(<mv_left>, <mv_right>, [<delim>])',
         returnType: 'multivalue',
-        examples: ['mvzip(names, emails, ":")'],
+        examples: ['mvzip(names, emails, ":")', 'mvzip(names, emails)'],
         relatedFunctions: ['mvappend', 'mvjoin']
     },
     {
@@ -579,19 +588,19 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'tostring',
         category: 'Conversion',
-        description: 'Converts a value to a string.',
-        signature: 'tostring(<value>, <format>)',
+        description: 'Converts a value to a string with optional formatting (commas, hex, duration).',
+        signature: 'tostring(<value>, [<format>])',
         returnType: 'string',
-        examples: ['tostring(count)', 'tostring(value, "commas")'],
+        examples: ['tostring(count)', 'tostring(value, "commas")', 'tostring(bytes, "duration")'],
         relatedFunctions: ['tonumber', 'tobool']
     },
     {
         name: 'tonumber',
         category: 'Conversion',
-        description: 'Converts a value to a number.',
-        signature: 'tonumber(<str>, <base>)',
+        description: 'Converts a string to a number with optional base (default 10, supports 2-36).',
+        signature: 'tonumber(<str>, [<base>])',
         returnType: 'number',
-        examples: ['tonumber("123")', 'tonumber("FF", 16)'],
+        examples: ['tonumber("123")', 'tonumber("FF", 16)', 'tonumber("1010", 2)'],
         relatedFunctions: ['tostring', 'toint']
     },
     {
@@ -600,34 +609,34 @@ exports.SPL_FUNCTIONS = [
         description: 'Converts a value to a boolean.',
         signature: 'tobool(<value>)',
         returnType: 'boolean',
-        examples: ['tobool("true")', 'tobool(1)'],
+        examples: ['tobool("true")', 'tobool(1)', 'tobool(0)'],
         relatedFunctions: ['tostring', 'tonumber']
     },
     {
         name: 'toint',
         category: 'Conversion',
-        description: 'Converts a value to an integer.',
-        signature: 'toint(<value>, <base>)',
+        description: 'Converts a value to an integer with optional base (default 10, supports 2-36).',
+        signature: 'toint(<value>, [<base>])',
         returnType: 'number',
-        examples: ['toint("123")', 'toint("FF", 16)'],
+        examples: ['toint("123")', 'toint("FF", 16)', 'toint("777", 8)'],
         relatedFunctions: ['tonumber', 'todouble']
     },
     {
         name: 'todouble',
         category: 'Conversion',
-        description: 'Converts a value to a double.',
-        signature: 'todouble(<value>, <base>)',
+        description: 'Converts a value to a double-precision floating point number with optional base.',
+        signature: 'todouble(<value>, [<base>])',
         returnType: 'number',
-        examples: ['todouble("3.14")'],
+        examples: ['todouble("3.14")', 'todouble("1.5e10")'],
         relatedFunctions: ['toint', 'tonumber']
     },
     {
         name: 'printf',
         category: 'Conversion',
-        description: 'Formats values using printf-style formatting.',
-        signature: 'printf(<format>, <arguments>)',
+        description: 'Formats values using printf-style formatting with variadic arguments.',
+        signature: 'printf(<format>, <arguments>...)',
         returnType: 'string',
-        examples: ['printf("%d items", count)', 'printf("%.2f", value)'],
+        examples: ['printf("%d items", count)', 'printf("%.2f", value)', 'printf("%s: %d", name, total)'],
         relatedFunctions: ['tostring']
     },
     // Informational Functions
@@ -716,37 +725,37 @@ exports.SPL_FUNCTIONS = [
     {
         name: 'bit_and',
         category: 'Bitwise',
-        description: 'Performs bitwise AND operation on two integers.',
-        signature: 'bit_and(<X>, <Y>)',
+        description: 'Performs bitwise AND operation on two or more nonnegative integers. Takes an arbitrary number of comma-separated arguments and returns the result of a logical AND operation on each pair of corresponding bits.',
+        signature: 'bit_and(<values>...)',
         returnType: 'number',
-        examples: ['bit_and(15, 7)', 'eval result=bit_and(flags, mask)'],
+        examples: ['bit_and(12, 9)', 'bit_and(15, 7, 3)', 'eval result=bit_and(flags, mask, filter)'],
         relatedFunctions: ['bit_or', 'bit_xor', 'bit_not']
     },
     {
         name: 'bit_or',
         category: 'Bitwise',
-        description: 'Performs bitwise OR operation on two integers.',
-        signature: 'bit_or(<X>, <Y>)',
+        description: 'Performs bitwise OR operation on two or more nonnegative integers. Takes an arbitrary number of comma-separated arguments and returns the result of a logical OR operation on each pair of corresponding bits.',
+        signature: 'bit_or(<values>...)',
         returnType: 'number',
-        examples: ['bit_or(8, 4)', 'eval flags=bit_or(flag1, flag2)'],
+        examples: ['bit_or(4, 2)', 'bit_or(8, 4, 2)', 'eval flags=bit_or(flag1, flag2, flag3)'],
         relatedFunctions: ['bit_and', 'bit_xor', 'bit_not']
     },
     {
         name: 'bit_xor',
         category: 'Bitwise',
-        description: 'Performs bitwise XOR operation on two integers.',
-        signature: 'bit_xor(<X>, <Y>)',
+        description: 'Performs bitwise XOR operation on two or more nonnegative integers. Takes an arbitrary number of comma-separated arguments and returns the result of a logical XOR operation on each pair of corresponding bits.',
+        signature: 'bit_xor(<values>...)',
         returnType: 'number',
-        examples: ['bit_xor(12, 10)', 'eval toggle=bit_xor(state, flag)'],
+        examples: ['bit_xor(3, 2)', 'bit_xor(12, 10, 6)', 'eval toggle=bit_xor(state, flag1, flag2)'],
         relatedFunctions: ['bit_and', 'bit_or', 'bit_not']
     },
     {
         name: 'bit_not',
         category: 'Bitwise',
-        description: 'Performs bitwise NOT operation on an integer.',
-        signature: 'bit_not(<X>)',
+        description: 'Performs bitwise NOT operation on an integer. Takes an optional second argument as a bitmask (default 2^53-1) that is used in an AND operation with the result.',
+        signature: 'bit_not(<value>, [<bitmask>])',
         returnType: 'number',
-        examples: ['bit_not(15)', 'eval inverted=bit_not(mask)'],
+        examples: ['bit_not(9)', 'bit_not(9, tonumber("1111", 2))', 'eval inverted=bit_not(mask, 0xFF)'],
         relatedFunctions: ['bit_and', 'bit_or', 'bit_xor']
     },
     {
@@ -872,7 +881,7 @@ exports.SPL_FUNCTIONS = [
         name: 'json_object',
         category: 'JSON',
         description: 'Creates a JSON object from key-value pairs.',
-        signature: 'json_object(<key1>, <value1>, <key2>, <value2>, ...)',
+        signature: 'json_object(<key>, <value>...)',
         returnType: 'string',
         examples: ['json_object("name", user, "id", userid)', 'eval json=json_object("status", "active", "count", cnt)'],
         relatedFunctions: ['json_array', 'spath']
@@ -881,7 +890,7 @@ exports.SPL_FUNCTIONS = [
         name: 'json_array',
         category: 'JSON',
         description: 'Creates a JSON array from values.',
-        signature: 'json_array(<value1>, <value2>, ...)',
+        signature: 'json_array(<values>...)',
         returnType: 'string',
         examples: ['json_array(val1, val2, val3)', 'eval array=json_array("red", "green", "blue")'],
         relatedFunctions: ['json_object', 'spath']
@@ -917,10 +926,28 @@ exports.SPL_FUNCTIONS = [
         name: 'json_append',
         category: 'JSON',
         description: 'Appends a value to a JSON array at the specified path.',
-        signature: 'json_append(<json>, <path>, <value>)',
+        signature: 'json_append(<json>, <path>, <value>...)',
         returnType: 'string',
-        examples: ['json_append(data, "$.items", "new_item")', 'eval updated=json_append(json_field, "$.tags", tag)'],
-        relatedFunctions: ['json_array', 'json_set']
+        examples: ['json_append(data, "$.items", "new_item")', 'eval updated=json_append(json_field, "$.tags", tag)', 'json_append(json, "$.array", val1, val2, val3)'],
+        relatedFunctions: ['json_array', 'json_set', 'json_extend']
+    },
+    {
+        name: 'json_extend',
+        category: 'JSON',
+        description: 'Extends JSON objects with new fields. Takes path-value pairs.',
+        signature: 'json_extend(<json>, <path>, <value>...)',
+        returnType: 'string',
+        examples: ['json_extend(data, "$.newfield", "value")', 'eval extended=json_extend(json, "$.key1", val1, "$.key2", val2)'],
+        relatedFunctions: ['json_set', 'json_object', 'json_append']
+    },
+    {
+        name: 'json_delete',
+        category: 'JSON',
+        description: 'Deletes keys from a JSON object. Takes multiple keys to delete.',
+        signature: 'json_delete(<object>, <keys>...)',
+        returnType: 'string',
+        examples: ['json_delete(data, "field1")', 'eval cleaned=json_delete(json, "key1", "key2", "key3")'],
+        relatedFunctions: ['json_set', 'json_object']
     },
     // Additional Common Functions
     {
@@ -976,6 +1003,308 @@ exports.SPL_FUNCTIONS = [
         returnType: 'multivalue',
         examples: ['mvrange(0, 10, 1)', 'eval numbers=mvrange(1, 100, 10)'],
         relatedFunctions: ['mvappend']
+    },
+    // Statistical and Charting Functions (used with stats, chart, timechart, eventstats, streamstats)
+    // Aggregate Functions
+    {
+        name: 'count',
+        category: 'Statistical',
+        description: 'Returns the number of occurrences where the field contains any value. Can also use abbreviation c().',
+        signature: 'count(<field>)',
+        returnType: 'number',
+        examples: ['count(status)', 'count(eval(status=200))', 'count(_raw)'],
+        relatedFunctions: ['dc', 'distinct_count', 'sum']
+    },
+    {
+        name: 'c',
+        category: 'Statistical',
+        description: 'Abbreviation for count(). Returns the number of occurrences where the field contains any value.',
+        signature: 'c(<field>)',
+        returnType: 'number',
+        examples: ['c(status)', 'c(_raw)'],
+        relatedFunctions: ['count', 'dc']
+    },
+    {
+        name: 'distinct_count',
+        category: 'Statistical',
+        description: 'Returns the count of distinct values in the field. Can also use abbreviation dc(). Processes field values as strings.',
+        signature: 'distinct_count(<field>)',
+        returnType: 'number',
+        examples: ['distinct_count(host)', 'distinct_count(clientip)'],
+        relatedFunctions: ['dc', 'estdc', 'count']
+    },
+    {
+        name: 'dc',
+        category: 'Statistical',
+        description: 'Abbreviation for distinct_count(). Returns the count of distinct values in the field. Processes field values as strings.',
+        signature: 'dc(<field>)',
+        returnType: 'number',
+        examples: ['dc(host)', 'dc(user)', 'dc(clientip)'],
+        relatedFunctions: ['distinct_count', 'estdc', 'count']
+    },
+    {
+        name: 'estdc',
+        category: 'Statistical',
+        description: 'Returns the estimated count of distinct values in the field. More efficient for high cardinality fields.',
+        signature: 'estdc(<field>)',
+        returnType: 'number',
+        examples: ['estdc(host)', 'estdc(user_id)'],
+        relatedFunctions: ['dc', 'distinct_count', 'estdc_error']
+    },
+    {
+        name: 'estdc_error',
+        category: 'Statistical',
+        description: 'Returns the theoretical error of the estimated distinct count. Represents error ratio.',
+        signature: 'estdc_error(<field>)',
+        returnType: 'number',
+        examples: ['estdc_error(host)'],
+        relatedFunctions: ['estdc']
+    },
+    {
+        name: 'mean',
+        category: 'Statistical',
+        description: 'Returns the arithmetic mean of the field. Same as avg().',
+        signature: 'mean(<field>)',
+        returnType: 'number',
+        examples: ['mean(duration)', 'mean(bytes)'],
+        relatedFunctions: ['avg', 'median', 'stdev']
+    },
+    {
+        name: 'median',
+        category: 'Statistical',
+        description: 'Returns the middle-most value of the field. Approximates to higher value for even counts.',
+        signature: 'median(<field>)',
+        returnType: 'number',
+        examples: ['median(response_time)', 'median(bytes)'],
+        relatedFunctions: ['mean', 'avg', 'perc50']
+    },
+    {
+        name: 'mode',
+        category: 'Statistical',
+        description: 'Returns the most frequent value in the field. Processes field values as strings.',
+        signature: 'mode(<field>)',
+        returnType: 'any',
+        examples: ['mode(status)', 'mode(host)', 'mode(action)'],
+        relatedFunctions: ['count', 'values']
+    },
+    {
+        name: 'perc',
+        category: 'Statistical',
+        description: 'Returns the Nth percentile value. Use perc<N>() where N is 0-100 (e.g., perc95, perc50).',
+        signature: 'perc<percentile>(<field>)',
+        returnType: 'number',
+        examples: ['perc95(response_time)', 'perc50(duration)', 'perc99(bytes)'],
+        relatedFunctions: ['upperperc', 'exactperc', 'median']
+    },
+    {
+        name: 'upperperc',
+        category: 'Statistical',
+        description: 'Returns approximate upper bound for percentile. Use upperperc<N>() where N is 0-100.',
+        signature: 'upperperc<percentile>(<field>)',
+        returnType: 'number',
+        examples: ['upperperc95(response_time)', 'upperperc99(latency)'],
+        relatedFunctions: ['perc', 'exactperc']
+    },
+    {
+        name: 'exactperc',
+        category: 'Statistical',
+        description: 'Returns exact percentile value. Very resource expensive for high cardinality fields. Use exactperc<N>() where N is 0-100.',
+        signature: 'exactperc<percentile>(<field>)',
+        returnType: 'number',
+        examples: ['exactperc95(response_time)', 'exactperc50(duration)'],
+        relatedFunctions: ['perc', 'upperperc', 'median']
+    },
+    {
+        name: 'range',
+        category: 'Statistical',
+        description: 'Returns the difference between max and min values in the field. Field values must be numeric.',
+        signature: 'range(<field>)',
+        returnType: 'number',
+        examples: ['range(bytes)', 'range(duration)', 'range(temperature)'],
+        relatedFunctions: ['max', 'min', 'stdev']
+    },
+    {
+        name: 'stdev',
+        category: 'Statistical',
+        description: 'Returns the sample standard deviation of the field.',
+        signature: 'stdev(<field>)',
+        returnType: 'number',
+        examples: ['stdev(response_time)', 'stdev(bytes)'],
+        relatedFunctions: ['stdevp', 'var', 'mean']
+    },
+    {
+        name: 'stdevp',
+        category: 'Statistical',
+        description: 'Returns the population standard deviation of the field.',
+        signature: 'stdevp(<field>)',
+        returnType: 'number',
+        examples: ['stdevp(response_time)', 'stdevp(latency)'],
+        relatedFunctions: ['stdev', 'varp', 'var']
+    },
+    {
+        name: 'sumsq',
+        category: 'Statistical',
+        description: 'Returns the sum of the squares of the values in the field. Used to evaluate variance.',
+        signature: 'sumsq(<field>)',
+        returnType: 'number',
+        examples: ['sumsq(deviation)', 'sumsq(error)'],
+        relatedFunctions: ['sum', 'var', 'stdev']
+    },
+    {
+        name: 'var',
+        category: 'Statistical',
+        description: 'Returns the sample variance of the field.',
+        signature: 'var(<field>)',
+        returnType: 'number',
+        examples: ['var(response_time)', 'var(bytes)'],
+        relatedFunctions: ['varp', 'stdev', 'mean']
+    },
+    {
+        name: 'varp',
+        category: 'Statistical',
+        description: 'Returns the population variance of the field.',
+        signature: 'varp(<field>)',
+        returnType: 'number',
+        examples: ['varp(response_time)', 'varp(latency)'],
+        relatedFunctions: ['var', 'stdevp', 'stdev']
+    },
+    // Event Order Functions
+    {
+        name: 'first',
+        category: 'Statistical',
+        description: 'Returns the first seen value in a field. Based on event order, not chronological order.',
+        signature: 'first(<field>)',
+        returnType: 'any',
+        examples: ['first(_raw)', 'first(status)', 'first(user)'],
+        relatedFunctions: ['last', 'earliest', 'latest']
+    },
+    {
+        name: 'last',
+        category: 'Statistical',
+        description: 'Returns the last seen value in a field. Based on event order, not chronological order.',
+        signature: 'last(<field>)',
+        returnType: 'any',
+        examples: ['last(_raw)', 'last(status)', 'last(user)'],
+        relatedFunctions: ['first', 'earliest', 'latest']
+    },
+    // Time Functions
+    {
+        name: 'earliest',
+        category: 'Statistical',
+        description: 'Returns the chronologically earliest (oldest) seen occurrence of a value in a field.',
+        signature: 'earliest(<field>)',
+        returnType: 'any',
+        examples: ['earliest(_time)', 'earliest(timestamp)', 'earliest(log_entry)'],
+        relatedFunctions: ['latest', 'earliest_time', 'first']
+    },
+    {
+        name: 'earliest_time',
+        category: 'Statistical',
+        description: 'Returns the UNIX time of the earliest (oldest) occurrence of a value. Used with rate calculations.',
+        signature: 'earliest_time(<field>)',
+        returnType: 'number',
+        examples: ['earliest_time(counter)', 'earliest_time(_value)'],
+        relatedFunctions: ['earliest', 'latest_time', 'rate']
+    },
+    {
+        name: 'latest',
+        category: 'Statistical',
+        description: 'Returns the chronologically latest (most recent) seen occurrence of a value in a field.',
+        signature: 'latest(<field>)',
+        returnType: 'any',
+        examples: ['latest(_time)', 'latest(timestamp)', 'latest(status)'],
+        relatedFunctions: ['earliest', 'latest_time', 'last']
+    },
+    {
+        name: 'latest_time',
+        category: 'Statistical',
+        description: 'Returns the UNIX time of the latest (most recent) occurrence of a value. Used with rate calculations.',
+        signature: 'latest_time(<field>)',
+        returnType: 'number',
+        examples: ['latest_time(counter)', 'latest_time(_value)'],
+        relatedFunctions: ['latest', 'earliest_time', 'rate']
+    },
+    {
+        name: 'per_day',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each day. Use with timechart command.',
+        signature: 'per_day(<field>)',
+        returnType: 'number',
+        examples: ['per_day(total)', 'per_day(eval(action="purchase"))'],
+        relatedFunctions: ['per_hour', 'per_minute', 'per_second', 'rate']
+    },
+    {
+        name: 'per_hour',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each hour. Use with timechart command.',
+        signature: 'per_hour(<field>)',
+        returnType: 'number',
+        examples: ['per_hour(total)', 'per_hour(eval(method="GET"))'],
+        relatedFunctions: ['per_day', 'per_minute', 'per_second', 'rate']
+    },
+    {
+        name: 'per_minute',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each minute. Use with timechart command.',
+        signature: 'per_minute(<field>)',
+        returnType: 'number',
+        examples: ['per_minute(total)', 'per_minute(eval(status=200))'],
+        relatedFunctions: ['per_day', 'per_hour', 'per_second', 'rate']
+    },
+    {
+        name: 'per_second',
+        category: 'Statistical',
+        description: 'Returns the values in a field or eval expression for each second. Use with timechart command.',
+        signature: 'per_second(<field>)',
+        returnType: 'number',
+        examples: ['per_second(kb)', 'per_second(requests)'],
+        relatedFunctions: ['per_day', 'per_hour', 'per_minute', 'rate']
+    },
+    {
+        name: 'rate',
+        category: 'Statistical',
+        description: 'Returns the per-second rate change of the value. Formula: (latest - earliest) / (latest_time - earliest_time). Handles counter resets.',
+        signature: 'rate(<field>)',
+        returnType: 'number',
+        examples: ['rate(traffic.incoming)', 'rate(counter_metric)'],
+        relatedFunctions: ['rate_avg', 'rate_sum', 'earliest', 'latest']
+    },
+    {
+        name: 'rate_avg',
+        category: 'Statistical',
+        description: 'Returns the average rates for time series associated with an accumulating counter metric.',
+        signature: 'rate_avg(<field>)',
+        returnType: 'number',
+        examples: ['rate_avg(spl.mlog.thruput.total_k_processed)'],
+        relatedFunctions: ['rate', 'rate_sum']
+    },
+    {
+        name: 'rate_sum',
+        category: 'Statistical',
+        description: 'Returns the summed rates for time series associated with an accumulating counter metric.',
+        signature: 'rate_sum(<field>)',
+        returnType: 'number',
+        examples: ['rate_sum(spl.mlog.thruput.total_k_processed)'],
+        relatedFunctions: ['rate', 'rate_avg']
+    },
+    // Multivalue Stats Functions
+    {
+        name: 'list',
+        category: 'Statistical',
+        description: 'Returns a list of up to 100 values in a field as a multivalue entry. Order reflects event order.',
+        signature: 'list(<field>)',
+        returnType: 'multivalue',
+        examples: ['list(action)', 'list(user)', 'list(status)'],
+        relatedFunctions: ['values', 'mvappend']
+    },
+    {
+        name: 'values',
+        category: 'Statistical',
+        description: 'Returns the list of all distinct values in a field as a multivalue entry. Order is lexicographical.',
+        signature: 'values(<field>)',
+        returnType: 'multivalue',
+        examples: ['values(host)', 'values(sourcetype)', 'values(action)'],
+        relatedFunctions: ['list', 'dc', 'distinct_count']
     }
 ];
 //# sourceMappingURL=spl-functions-database.js.map

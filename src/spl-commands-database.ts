@@ -4,14 +4,27 @@
  * Categories: Data Manipulation, Stats & Aggregation, ML & Analytics, Visualization, etc.
  */
 
+import * as PARAMS from './spl-command-parameters';
+
+// Import and re-export parameter types to avoid circular dependencies
+export { ParameterType, ParameterDefinition } from './spl-parameter-types';
+import { ParameterType, ParameterDefinition } from './spl-parameter-types';
+
+/**
+ * Enhanced SPL Command interface with detailed parameter support
+ */
 export interface SPLCommand {
 	name: string;
 	type: string;
 	category: string;
 	description: string;
 	syntax: string;
+	/** Legacy: total count of required arguments (kept for compatibility) */
 	requiredArgs: number;
+	/** Legacy: total count of optional arguments (kept for compatibility) */
 	optionalArgs: number;
+	/** Detailed parameter definitions */
+	parameters?: ParameterDefinition[];
 	examples?: string[];
 	relatedCommands?: string[];
 }
@@ -25,6 +38,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'abstract [maxterms=<int>] [maxlines=<int>]',
 		requiredArgs: 0,
 		optionalArgs: 2,
+		parameters: PARAMS.ABSTRACT_PARAMS,
 		examples: ['... | abstract maxlines=5', '... | abstract maxterms=20'],
 		relatedCommands: ['highlight']
 	},
@@ -36,6 +50,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'accum <field> [AS <newfield>]',
 		requiredArgs: 1,
 		optionalArgs: 1,
+		parameters: PARAMS.ACCUM_PARAMS,
 		examples: ['... | accum count', '... | accum bytes AS total_bytes'],
 		relatedCommands: ['autoregress', 'delta', 'streamstats', 'trendline']
 	},
@@ -47,6 +62,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'addcoltotals [labelfield=<field>] [label=<string>] [<wc-field-list>]',
 		requiredArgs: 0,
 		optionalArgs: 3,
+		parameters: PARAMS.ADDCOLTOTALS_PARAMS,
 		examples: ['... | addcoltotals', '... | addcoltotals labelfield=Total label=TOTAL bytes duration'],
 		relatedCommands: ['addtotals', 'stats']
 	},
@@ -69,6 +85,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'addtotals [row=<bool>] [col=<bool>] [labelfield=<field>] [label=<string>] [fieldname=<field>] [<field-list>]',
 		requiredArgs: 0,
 		optionalArgs: 6,
+		parameters: PARAMS.ADDTOTALS_PARAMS,
 		examples: ['... | addtotals', '... | addtotals fieldname=sum', '... | addtotals col=t labelfield=products label="Quarterly Totals"'],
 		relatedCommands: ['stats', 'addcoltotals']
 	},
@@ -91,6 +108,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'anomalies [threshold=<num>] [labelonly=<bool>] [normalize=<bool>] [maxvalues=<num>] [field=<field>] [denylist=<filename>] [denylistthreshold=<num>] [by-clause]',
 		requiredArgs: 0,
 		optionalArgs: 7,
+		parameters: PARAMS.ANOMALIES_PARAMS,
 		examples: ['... | anomalies', '... | anomalies threshold=0.03 by source', '... | anomalies denylist=boringevents | sort -unexpectedness'],
 		relatedCommands: ['anomalousvalue', 'cluster', 'kmeans', 'outlier']
 	},
@@ -102,6 +120,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'anomalousvalue <av-options>... [action] [pthresh] [field-list]',
 		requiredArgs: 0,
 		optionalArgs: 6,
+		parameters: PARAMS.ANOMALOUSVALUE_PARAMS,
 		examples: ['... | anomalousvalue', '... | anomalousvalue action=filter pthresh=0.02', '... | anomalousvalue action=summary pthresh=0.02 | search isNum=YES'],
 		relatedCommands: ['analyzefields', 'anomalies', 'cluster', 'kmeans', 'outlier']
 	},
@@ -113,6 +132,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'anomalydetection [<method-option>] [<action-option>] [<pthresh-option>] [<cutoff-option>] [<field-list>]',
 		requiredArgs: 0,
 		optionalArgs: 4,
+		parameters: PARAMS.ANOMALYDETECTION_PARAMS,
 		examples: ['... | anomalydetection', '... | anomalydetection method=zscore action=filter pthresh=0.05', '... | anomalydetection method=iqr action=tf param=4 uselower=true mark=true'],
 		relatedCommands: ['analyzefields', 'anomalies', 'anomalousvalue', 'cluster', 'kmeans', 'outlier']
 	},
@@ -124,6 +144,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'append [<subsearch-options>...] <subsearch>',
 		requiredArgs: 1,
 		optionalArgs: 3,
+		parameters: PARAMS.APPEND_PARAMS,
 		examples: ['... | append [search index=other]', '... | append maxtime=30 maxout=1000 [search index=other]'],
 		relatedCommands: ['appendcols', 'appendpipe', 'join', 'set']
 	},
@@ -135,6 +156,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'appendcols [override=<bool> | <subsearch-options>...] <subsearch>',
 		requiredArgs: 1,
 		optionalArgs: 4,
+		parameters: PARAMS.APPENDCOLS_PARAMS,
 		examples: ['... | table host | appendcols [search 404]', '... | appendcols override=true [search ...]'],
 		relatedCommands: ['append', 'appendpipe', 'join', 'set']
 	},
@@ -146,6 +168,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'appendpipe [run_in_preview=<bool>] [<subpipeline>]',
 		requiredArgs: 0,
 		optionalArgs: 2,
+		parameters: PARAMS.APPENDPIPE_PARAMS,
 		examples: ['... | appendpipe [stats sum(count) as count by action | eval user = "TOTAL - ALL USERS"] | sort action'],
 		relatedCommands: ['append', 'appendcols', 'join', 'set']
 	},
@@ -157,6 +180,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'arules [<arules-option>...] <field-list>...',
 		requiredArgs: 1,
 		optionalArgs: 2,
+		parameters: PARAMS.ARULES_PARAMS,
 		examples: ['... | arules field1 field2 field3', '... | arules sup=3 conf=.6 field1 field2 field3'],
 		relatedCommands: ['associate', 'correlate']
 	},
@@ -168,6 +192,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'associate [<associate-options>...] [field-list]',
 		requiredArgs: 0,
 		optionalArgs: 3,
+		parameters: PARAMS.ASSOCIATE_PARAMS,
 		examples: ['... | associate supcnt=3', '... | associate supcnt=50 supfreq=0.2 improv=0.5'],
 		relatedCommands: ['arules', 'correlate', 'contingency']
 	},
@@ -179,8 +204,20 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'autoregress <field> [AS <newfield>] [p=<int> | p=<int>-<int>]',
 		requiredArgs: 1,
 		optionalArgs: 2,
+		parameters: PARAMS.AUTOREGRESS_PARAMS,
 		examples: ['... | autoregress ip AS old_ip p=3', '... | autoregress count p=2-5', '... | eval rawlen=len(_raw) | autoregress rawlen p=1-4 | eval moving_average=(rawlen + rawlen_p1 + rawlen_p2 + rawlen_p3 +rawlen_p4) /5'],
 		relatedCommands: ['accum', 'delta', 'streamstats', 'trendline']
+	},
+	{
+		name: 'awssnsalert',
+		type: 'Streaming',
+		category: 'Alerting',
+		description: 'Sends search results to AWS Simple Notification Service (SNS) for alerting and notification.',
+		syntax: 'awssnsalert <aws-sns-options>',
+		requiredArgs: 1,
+		optionalArgs: 5,
+		examples: ['... | awssnsalert sns_topic="arn:aws:sns:us-east-1:123456789012:MySplunkAlerts"'],
+		relatedCommands: ['sendalert', 'sendemail']
 	},
 	{
 		name: 'bin',
@@ -190,6 +227,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'bin [<bin-options>...] <field> [AS <newfield>]',
 		requiredArgs: 1,
 		optionalArgs: 6,
+		parameters: PARAMS.BIN_PARAMS,
 		examples: ['... | bin _time span=5m | stats avg(thruput) by _time host', '... | bin size bins=10 | stats count(_raw) by size', '... | bin amount end=1000'],
 		relatedCommands: ['chart', 'timechart', 'bucket']
 	},
@@ -201,6 +239,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'bucket [<bin-options>...] <field> [AS <newfield>]',
 		requiredArgs: 1,
 		optionalArgs: 0,
+		parameters: PARAMS.BUCKET_PARAMS,
 		examples: ['... | bucket _time span=1h'],
 		relatedCommands: ['bin', 'chart', 'timechart']
 	},
@@ -212,6 +251,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'bucketdir pathfield=<field> sizefield=<field> [maxcount=<int>] [countfield=<field>] [sep=<char>]',
 		requiredArgs: 2,
 		optionalArgs: 3,
+		parameters: PARAMS.BUCKETDIR_PARAMS,
 		examples: ['... | top source | bucketdir pathfield=source sizefield=count maxcount=10'],
 		relatedCommands: ['cluster', 'dedup']
 	},
@@ -223,6 +263,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'chart [<chart-options>] [agg=<stats-agg-term>] (<stats-agg-term> | <sparkline-agg-term> | "(<eval-expression>)")... [BY <row-split> <column-split>] | [OVER <row-split>] [BY <column-split>] [<dedup_splitvals>]',
 		requiredArgs: 1,
 		optionalArgs: 6,
+		parameters: PARAMS.CHART_PARAMS,
 		examples: ['... | chart max(delay) OVER site', '... | chart max(delay) OVER site BY org', '... | chart count BY date_mday span=3 date_hour span=12'],
 		relatedCommands: ['timechart', 'bin', 'sichart']
 	},
@@ -234,6 +275,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'cluster [slc-options]...',
 		requiredArgs: 0,
 		optionalArgs: 8,
+		parameters: PARAMS.CLUSTER_PARAMS,
 		examples: ['... | cluster showcount=t | table cluster_count _raw | sort -cluster_count', '... | cluster t=0.9 showcount=t | sort - cluster_count | head 20'],
 		relatedCommands: ['anomalies', 'anomalousvalue', 'kmeans', 'outlier']
 	},
@@ -245,6 +287,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'cofilter <field1> <field2>',
 		requiredArgs: 2,
 		optionalArgs: 0,
+		parameters: PARAMS.COFILTER_PARAMS,
 		examples: ['... | cofilter user item'],
 		relatedCommands: ['associate', 'correlate']
 	},
@@ -256,8 +299,31 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'collect index=<string> [<arg-options>...]',
 		requiredArgs: 1,
 		optionalArgs: 13,
+		parameters: PARAMS.COLLECT_PARAMS,
 		examples: ['... | collect index=summary', '... | collect index=summary source=devtest output_format=hec'],
 		relatedCommands: ['overlap', 'sichart', 'sirare', 'sistats', 'sitimechart', 'sitop', 'tscollect']
+	},
+	{
+		name: 'concurrency',
+		type: 'Transforming',
+		category: 'Stats & Aggregation',
+		description: 'Uses a duration field to find events that occurred at the same time or had overlapping time periods.',
+		syntax: 'concurrency duration=<field> [start=<field>] [output=<field>] [outputfield=<field>]',
+		requiredArgs: 1,
+		optionalArgs: 3,
+		examples: ['... | concurrency duration=session_length', '... | concurrency duration=duration start=start_time output=concurrent_users'],
+		relatedCommands: ['transaction', 'overlap']
+	},
+	{
+		name: 'contingency',
+		type: 'Transforming',
+		category: 'Stats & Aggregation',
+		description: 'Builds a contingency table for two fields. Shows the co-occurrence of values.',
+		syntax: 'contingency <field1> <field2> [<contingency-options>]',
+		requiredArgs: 2,
+		optionalArgs: 3,
+		examples: ['... | contingency host status', '... | contingency user action maxcols=20'],
+		relatedCommands: ['associate', 'correlate', 'ctable']
 	},
 	{
 		name: 'convert',
@@ -267,6 +333,7 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		syntax: 'convert [timeformat=string] (<convert-function> [AS <field>])...',
 		requiredArgs: 1,
 		optionalArgs: 2,
+		parameters: PARAMS.CONVERT_PARAMS,
 		examples: ['... | convert auto(*)', '... | convert dur2sec(delay)', '... | convert timeformat="%H:%M:%S" ctime(_time) AS c_time'],
 		relatedCommands: ['eval', 'fieldformat']
 	},
@@ -274,34 +341,56 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		name: 'correlate',
 		type: 'Transforming',
 		category: 'Stats & Aggregation',
-		description: 'Calculates the correlation between different fields in your data.',
+		description: 'Calculates the correlation between different fields.',
 		syntax: 'correlate <field-list>',
 		requiredArgs: 1,
 		optionalArgs: 0,
-		examples: ['... | correlate field1 field2 field3'],
-		relatedCommands: ['stats', 'contingency', 'associate']
+		examples: ['... | correlate duration bytes', '... | correlate field1 field2 field3'],
+		relatedCommands: ['associate', 'contingency']
 	},
 	{
 		name: 'crawl',
 		type: 'Generating',
 		category: 'Data Input',
-		description: 'Retrieves events from a web server or other remote system.',
-		syntax: 'crawl [depth=<int>] <url>',
+		description: 'Crawls the filesystem for new data files.',
+		syntax: 'crawl <path> [<crawl-options>]',
 		requiredArgs: 1,
-		optionalArgs: 1,
-		examples: ['| crawl http://example.com', '| crawl depth=2 http://example.com/docs'],
-		relatedCommands: ['inputlookup', 'rest']
+		optionalArgs: 5,
+		examples: ['| crawl /var/log'],
+		relatedCommands: ['inputlookup']
+	},
+	{
+		name: 'ctable',
+		type: 'Transforming',
+		category: 'Presentation',
+		description: 'Creates a contingency table (crosstab) from the search results. Alternative to stats and chart commands.',
+		syntax: 'ctable <row-field> <column-field> <value-field>',
+		requiredArgs: 3,
+		optionalArgs: 0,
+		examples: ['... | ctable host status count', '... | ctable product region sales'],
+		relatedCommands: ['chart', 'contingency', 'xyseries']
 	},
 	{
 		name: 'datamodel',
 		type: 'Generating',
 		category: 'Data Model',
-		description: 'Searches data model datasets.',
-		syntax: 'datamodel <datamodel-name> <dataset-name> search',
-		requiredArgs: 3,
-		optionalArgs: 0,
-		examples: ['| datamodel Web Web search', '| datamodel Authentication Authentication search'],
-		relatedCommands: ['tstats', 'pivot']
+		description: 'Examines data model or data model dataset and returns information about the data model objects or datasets.',
+		syntax: 'datamodel [<datamodel-name>] [<dataset-name>] [search] [<search-options>]',
+		requiredArgs: 0,
+		optionalArgs: 5,
+		examples: ['| datamodel', '| datamodel Web search', '| datamodel Authentication Failed_Authentication search'],
+		relatedCommands: ['pivot', 'tstats', 'from']
+	},
+	{
+		name: 'datamodelsimple',
+		type: 'Generating',
+		category: 'Data Model',
+		description: 'Similar to datamodel command but with simpler output format.',
+		syntax: 'datamodelsimple [<datamodel-name>]',
+		requiredArgs: 0,
+		optionalArgs: 1,
+		examples: ['| datamodelsimple', '| datamodelsimple Web'],
+		relatedCommands: ['datamodel', 'pivot']
 	},
 	{
 		name: 'dbinspect',
@@ -312,7 +401,18 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		requiredArgs: 0,
 		optionalArgs: 2,
 		examples: ['| dbinspect index=main', '| dbinspect index=_*'],
-		relatedCommands: ['metadata', 'dbxquery']
+		relatedCommands: ['metadata', 'eventcount']
+	},
+	{
+		name: 'dbxquery',
+		type: 'Generating',
+		category: 'Database',
+		description: 'Runs SQL queries against external databases using Splunk DB Connect.',
+		syntax: 'dbxquery connection=<string> query=<string> [<dbxquery-options>]',
+		requiredArgs: 2,
+		optionalArgs: 5,
+		examples: ['| dbxquery connection="mydb" query="SELECT * FROM users WHERE status=\'active\'"'],
+		relatedCommands: ['dbinspect', 'inputlookup']
 	},
 	{
 		name: 'dedup',
@@ -370,6 +470,17 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['rex', 'extract', 'kvform']
 	},
 	{
+		name: 'entitymerge',
+		type: 'Streaming',
+		category: 'Data Manipulation',
+		description: 'Merges entity information from multiple sources into a single entity representation.',
+		syntax: 'entitymerge [<entitymerge-options>]',
+		requiredArgs: 0,
+		optionalArgs: 5,
+		examples: ['... | entitymerge prefix=user'],
+		relatedCommands: ['join', 'lookup']
+	},
+	{
 		name: 'eval',
 		type: 'Streaming',
 		category: 'Data Processing',
@@ -379,6 +490,17 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		optionalArgs: -1,
 		examples: ['... | eval bandwidth=bytes/duration', '... | eval hour=strftime(_time, "%H")', '... | eval status=if(error>0, "fail", "success")'],
 		relatedCommands: ['where', 'fieldformat', 'calculate']
+	},
+	{
+		name: 'eventcount',
+		type: 'Generating',
+		category: 'Stats & Aggregation',
+		description: 'Returns the number of events in an index or across indexes.',
+		syntax: 'eventcount [summarize=<bool>] [index=<index>] [report_size=<bool>]',
+		requiredArgs: 0,
+		optionalArgs: 3,
+		examples: ['| eventcount summarize=false index=main', '| eventcount summarize=true', '| eventcount report_size=true index=*'],
+		relatedCommands: ['dbinspect', 'metadata']
 	},
 	{
 		name: 'eventstats',
@@ -513,6 +635,17 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['datamodel', 'inputlookup']
 	},
 	{
+		name: 'fromjson',
+		type: 'Streaming',
+		category: 'Data Manipulation',
+		description: 'Parses a JSON string and extracts fields from it.',
+		syntax: 'fromjson [<field>] [output=<field>] [maxinputs=<int>]',
+		requiredArgs: 0,
+		optionalArgs: 3,
+		examples: ['... | fromjson', '... | fromjson json_data output=parsed', '... | fromjson response maxinputs=1000'],
+		relatedCommands: ['tojson', 'spath', 'eval']
+	},
+	{
 		name: 'gauge',
 		type: 'Streaming',
 		category: 'Visualization',
@@ -631,7 +764,19 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		requiredArgs: 1,
 		optionalArgs: 4,
 		examples: ['| inputlookup users_lookup', '| inputlookup append=true where user="admin" users_lookup'],
-		relatedCommands: ['lookup', 'outputlookup', 'inputcsv']
+		relatedCommands: ['lookup', 'outputlookup', 'inputcsv'],
+		parameters: PARAMS.INPUTLOOKUP_PARAMS
+	},
+	{
+		name: 'inputintelligence',
+		type: 'Generating',
+		category: 'Data Input',
+		description: 'Retrieves threat intelligence data for security analysis.',
+		syntax: 'inputintelligence [<intelligence-options>]',
+		requiredArgs: 0,
+		optionalArgs: 5,
+		examples: ['| inputintelligence'],
+		relatedCommands: ['inputlookup', 'lookup']
 	},
 	{
 		name: 'iplocation',
@@ -722,6 +867,17 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['inputlookup', 'outputlookup', 'join', 'iplocation']
 	},
 	{
+		name: 'localop',
+		type: 'Streaming',
+		category: 'Advanced',
+		description: 'Forces subsequent commands to run locally on the search head instead of being distributed.',
+		syntax: 'localop',
+		requiredArgs: 0,
+		optionalArgs: 0,
+		examples: ['... | localop | stats count'],
+		relatedCommands: ['redistribute']
+	},
+	{
 		name: 'makecontinuous',
 		type: 'Transforming',
 		category: 'Data Manipulation',
@@ -797,6 +953,39 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		optionalArgs: 5,
 		examples: ['... | meventcollect index=metrics_summary'],
 		relatedCommands: ['collect', 'mcollect']
+	},
+	{
+		name: 'mcollect',
+		type: 'Streaming',
+		category: 'Metrics',
+		description: 'Converts events to metric data and writes them to a metrics index.',
+		syntax: 'mcollect index=<string> [split=<bool>] [spool=<bool>] [prefix_field=<field>]',
+		requiredArgs: 1,
+		optionalArgs: 4,
+		examples: ['... | mcollect index=metrics_app', '... | mcollect index=metrics split=true prefix_field=metric_name'],
+		relatedCommands: ['meventcollect', 'collect', 'mstats']
+	},
+	{
+		name: 'mpreview',
+		type: 'Generating',
+		category: 'Metrics',
+		description: 'Previews metric data and shows how it would be collected.',
+		syntax: 'mpreview [<mpreview-options>]',
+		requiredArgs: 0,
+		optionalArgs: 3,
+		examples: ['| mpreview'],
+		relatedCommands: ['mcollect', 'mstats']
+	},
+	{
+		name: 'msearch',
+		type: 'Generating',
+		category: 'Search',
+		description: 'Runs multiple independent searches simultaneously.',
+		syntax: 'msearch [<search1>] [<search2>] ...',
+		requiredArgs: 1,
+		optionalArgs: -1,
+		examples: ['| msearch [search index=web] [search index=app]'],
+		relatedCommands: ['multisearch', 'append', 'join']
 	},
 	{
 		name: 'mstats',
@@ -895,7 +1084,8 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		requiredArgs: 1,
 		optionalArgs: 6,
 		examples: ['... | outputlookup users_lookup', '... | outputlookup append=true key_field=user_id users_lookup'],
-		relatedCommands: ['inputlookup', 'lookup', 'outputcsv']
+		relatedCommands: ['inputlookup', 'lookup', 'outputcsv'],
+		parameters: PARAMS.OUTPUTLOOKUP_PARAMS
 	},
 	{
 		name: 'outputtext',
@@ -953,6 +1143,17 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['case', 'eval']
 	},
 	{
+		name: 'rare',
+		type: 'Transforming',
+		category: 'Stats & Aggregation',
+		description: 'Returns the least common field values. Opposite of the top command.',
+		syntax: 'rare [<limit>] [<rare-options>] <field-list> [by <field-list>]',
+		requiredArgs: 1,
+		optionalArgs: 5,
+		examples: ['... | rare status', '... | rare 5 user by host', '... | rare limit=20 clientip showperc=true'],
+		relatedCommands: ['top', 'stats', 'chart']
+	},
+	{
 		name: 'regex',
 		type: 'Streaming',
 		category: 'Filtering',
@@ -975,6 +1176,39 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['anomalies']
 	},
 	{
+		name: 'rename',
+		type: 'Streaming',
+		category: 'Field Operations',
+		description: 'Renames one or more fields. Supports wildcard-based bulk renaming.',
+		syntax: 'rename <wc-field> AS <wc-field> [<wc-field> AS <wc-field>]...',
+		requiredArgs: 2,
+		optionalArgs: -1,
+		examples: ['... | rename user AS username', '... | rename src_ip AS source_ip, dst_ip AS dest_ip', '... | rename SESS_* AS session_*'],
+		relatedCommands: ['eval', 'fields', 'table']
+	},
+	{
+		name: 'replace',
+		type: 'Streaming',
+		category: 'Data Manipulation',
+		description: 'Replaces values in specified fields that match a string.',
+		syntax: 'replace (<string> WITH <string>)... [IN <field-list>]',
+		requiredArgs: 2,
+		optionalArgs: -1,
+		examples: ['... | replace 0 WITH Critical, 1 WITH High, 2 WITH Medium IN priority', '... | replace "unknown" WITH "N/A" IN user, host, source'],
+		relatedCommands: ['eval', 'rex', 'regex']
+	},
+	{
+		name: 'rex',
+		type: 'Streaming',
+		category: 'Field Extraction',
+		description: 'Extract fields using regular expressions. Supports named capture groups and field modification.',
+		syntax: 'rex [field=<field>] [max_match=<int>] [mode=sed] (<regex-expression> | <sed-expression>)',
+		requiredArgs: 1,
+		optionalArgs: 3,
+		examples: ['... | rex field=_raw "(?<user>\\w+)@(?<domain>\\w+\\.\\w+)"', '... | rex "From: (?<email>\\S+)"', '... | rex mode=sed "s/Error/Warning/g"'],
+		relatedCommands: ['regex', 'extract', 'erex']
+	},
+	{
 		name: 'reltime',
 		type: 'Streaming',
 		category: 'Time',
@@ -984,6 +1218,17 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		optionalArgs: 1,
 		examples: ['... | reltime', '... | reltime field=_time'],
 		relatedCommands: ['convert']
+	},
+	{
+		name: 'require',
+		type: 'Streaming',
+		category: 'Filtering',
+		description: 'Requires that specified fields exist and are non-null in events.',
+		syntax: 'require <field-list>',
+		requiredArgs: 1,
+		optionalArgs: 0,
+		examples: ['... | require user, action', '... | require clientip status'],
+		relatedCommands: ['where', 'search', 'fields']
 	},
 	{
 		name: 'rest',
@@ -1206,6 +1451,61 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['top', 'sistats']
 	},
 	{
+		name: 'snowevent',
+		type: 'Streaming',
+		category: 'Integration',
+		description: 'Creates events in ServiceNow.',
+		syntax: 'snowevent [<servicenow-options>]',
+		requiredArgs: 0,
+		optionalArgs: 10,
+		examples: ['... | snowevent'],
+		relatedCommands: ['snowincident', 'sendalert']
+	},
+	{
+		name: 'snoweventstream',
+		type: 'Streaming',
+		category: 'Integration',
+		description: 'Streams events to ServiceNow in real-time.',
+		syntax: 'snoweventstream [<servicenow-options>]',
+		requiredArgs: 0,
+		optionalArgs: 10,
+		examples: ['... | snoweventstream'],
+		relatedCommands: ['snowevent', 'snowincident']
+	},
+	{
+		name: 'snowincident',
+		type: 'Streaming',
+		category: 'Integration',
+		description: 'Creates incidents in ServiceNow.',
+		syntax: 'snowincident [<servicenow-options>]',
+		requiredArgs: 0,
+		optionalArgs: 10,
+		examples: ['... | snowincident'],
+		relatedCommands: ['snowevent', 'sendalert']
+	},
+	{
+		name: 'snowincidentstream',
+		type: 'Streaming',
+		category: 'Integration',
+		description: 'Streams incidents to ServiceNow in real-time.',
+		syntax: 'snowincidentstream [<servicenow-options>]',
+		requiredArgs: 0,
+		optionalArgs: 10,
+		examples: ['... | snowincidentstream'],
+		relatedCommands: ['snowincident', 'snowevent']
+	},
+	{
+		name: 'sort',
+		type: 'Streaming',
+		category: 'Presentation',
+		description: 'Sorts search results by one or more fields in ascending or descending order.',
+		syntax: 'sort [<limit>] [<sort-by-clause>]... [<sort-options>]',
+		requiredArgs: 0,
+		optionalArgs: 10,
+		examples: ['... | sort -count', '... | sort 100 +status, -_time', '... | sort 0 host, source desc', '... | sort limit=50 -bytes'],
+		relatedCommands: ['reverse', 'head', 'tail']
+	},
+	{
 		name: 'spath',
 		type: 'Streaming',
 		category: 'Data Extraction',
@@ -1226,6 +1526,17 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		optionalArgs: 1,
 		examples: ['... | strcat firstname " " lastname fullname', '... | strcat protocol "://" host ":" port url'],
 		relatedCommands: ['eval']
+	},
+	{
+		name: 'stats',
+		type: 'Transforming',
+		category: 'Stats & Aggregation',
+		description: 'Calculates aggregate statistics over result sets, such as average, count, and sum. Produces a statistical table with one row per unique BY clause combination.',
+		syntax: 'stats [<stats-options>] <stats-agg-term>... [BY <field-list>]',
+		requiredArgs: 1,
+		optionalArgs: 10,
+		examples: ['... | stats count', '... | stats avg(bytes) by host', '... | stats count, avg(duration), max(bytes) by status', '... | stats dc(user) AS unique_users sum(sales) AS total_sales by product'],
+		relatedCommands: ['eventstats', 'streamstats', 'chart', 'timechart', 'top']
 	},
 	{
 		name: 'streamstats',
@@ -1261,6 +1572,28 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['search', 'eval']
 	},
 	{
+		name: 'tail',
+		type: 'Streaming',
+		category: 'Filtering',
+		description: 'Returns the last N events from search results.',
+		syntax: 'tail [<N>]',
+		requiredArgs: 0,
+		optionalArgs: 1,
+		examples: ['... | tail 20', '... | tail 100'],
+		relatedCommands: ['head', 'reverse', 'sort']
+	},
+	{
+		name: 'timechart',
+		type: 'Transforming',
+		category: 'Visualization',
+		description: 'Creates time-series chart. Performs statistical aggregation against time.',
+		syntax: 'timechart [<timechart-options>] <stats-agg-term>... [by <field>] [<bin-options>]',
+		requiredArgs: 1,
+		optionalArgs: 10,
+		examples: ['... | timechart count', '... | timechart span=1h avg(bytes) by status', '... | timechart limit=10 useother=false sum(sales) by product'],
+		relatedCommands: ['chart', 'timewrap', 'bin']
+	},
+	{
 		name: 'timewrap',
 		type: 'Transforming',
 		category: 'Time',
@@ -1270,6 +1603,28 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		optionalArgs: 5,
 		examples: ['... | timechart count | timewrap 1d', '... | timechart avg(response_time) | timewrap 7d series=short'],
 		relatedCommands: ['timechart', 'trendline']
+	},
+	{
+		name: 'tojson',
+		type: 'Streaming',
+		category: 'Data Manipulation',
+		description: 'Converts events or fields to JSON format.',
+		syntax: 'tojson [<field-list>] [output=<field>]',
+		requiredArgs: 0,
+		optionalArgs: 2,
+		examples: ['... | tojson', '... | tojson user, status output=json_data', '... | tojson output=event_json'],
+		relatedCommands: ['fromjson', 'spath', 'eval']
+	},
+	{
+		name: 'top',
+		type: 'Transforming',
+		category: 'Stats & Aggregation',
+		description: 'Returns the most common field values. Shows frequency count and percentage.',
+		syntax: 'top [<limit>] [<top-options>] <field-list> [by <field-list>]',
+		requiredArgs: 1,
+		optionalArgs: 5,
+		examples: ['... | top status', '... | top 10 user by host', '... | top limit=20 clientip showperc=false'],
+		relatedCommands: ['rare', 'stats', 'chart']
 	},
 	{
 		name: 'transaction',
@@ -1448,6 +1803,28 @@ export const SPL_COMMANDS: SPLCommand[] = [
 		relatedCommands: ['spath', 'xmlkv']
 	},
 	{
+		name: 'walklex',
+		type: 'Generating',
+		category: 'Index Management',
+		description: 'Walks the lexicon of indexed fields and returns term statistics.',
+		syntax: 'walklex [type=<field-type>] [<field>] [prefix=<string>]',
+		requiredArgs: 0,
+		optionalArgs: 3,
+		examples: ['| walklex type=term user', '| walklex prefix=error'],
+		relatedCommands: ['metadata', 'typeahead']
+	},
+	{
+		name: 'where',
+		type: 'Streaming',
+		category: 'Filtering & Searching',
+		description: 'Filters search results using eval expressions. Uses the same expression syntax as the eval command.',
+		syntax: 'where <eval-expression>',
+		requiredArgs: 1,
+		optionalArgs: 0,
+		examples: ['... | where status >= 400', '... | where bytes > 1000 AND method="POST"', '... | where isnotnull(user) AND len(user) > 5', '... | where like(host, "prod%")'],
+		relatedCommands: ['eval', 'search', 'regex']
+	},
+	{
 		name: 'xyseries',
 		type: 'Transforming',
 		category: 'Presentation',
@@ -1464,5 +1841,13 @@ export const SPL_COMMANDS: SPLCommand[] = [
  * Lookup helper function to find command by name
  */
 export function getSPLCommand(name: string): SPLCommand | undefined {
-return SPL_COMMANDS.find(cmd => cmd.name.toLowerCase() === name.toLowerCase());
+	return SPL_COMMANDS.find(cmd => cmd.name.toLowerCase() === name.toLowerCase());
+}
+
+/**
+ * Get parameter definitions for a command
+ */
+export function getCommandParameters(name: string): ParameterDefinition[] {
+	const cmd = getSPLCommand(name);
+	return cmd?.parameters || [];
 }

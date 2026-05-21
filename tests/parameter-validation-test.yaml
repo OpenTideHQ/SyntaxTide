@@ -1,0 +1,79 @@
+---
+id: parameter-validation-test
+name: "SPL Parameter Validation Test"
+description: "Test cases for parameter validation, autocomplete, and hover support"
+severity: high
+
+configurations:
+  splunk:
+    query: |
+      # Test 1: Command with all required parameters provided (should be valid)
+      | accum bytes AS total_bytes
+      
+      # Test 2: Command missing required parameter (should error)
+      | accum
+      
+      # Test 3: Command with optional parameters
+      | abstract maxlines=10 maxterms=50
+      
+      # Test 4: Command with only some optional parameters
+      | abstract maxlines=5
+      
+      # Test 5: Command with unknown named parameter (should warn)
+      | abstract unknownparam=123 max(test) 
+      
+      # Test 6: addtotals with field list (positional parameters)
+      | addtotals bytes duration response_time
+      
+      # Test 7: addtotals with named and positional mixed
+      | addtotals 
+      
+      # Test 8: chart command with complex parameters (from earlier test)
+      | chart 
+          sum(total_bytes) as total_traffic,
+          avg(risk_score) as avg_risk,
+          max(event_count) as max_events
+        over user
+        by severity
+        limit=20
+      
+      # Test 9: bin command with multiple named parameters
+      | bin span=1h _time
+      
+      # Test 10: bin with just required parameter
+      | bin _time
+      
+      # Test 11: analyzefields with required named parameter
+      | analyzefields classfield=is_activated
+      
+      # Test 12: analyzefields missing required parameter (should error)
+      | analyzefields bullshit_value=
+      | abstract other_bullshit=
+      | abstract maxlines=10 whatever=
+      | abstract unknowncparameter=
+
+      # Test 13: anomalies with multiple optional parameters
+      | anomalies threshold=0.03 blabla=1 field=message by source
+      | anomalies something=1
+      | abstract whatever=
+
+      # Test 14: arules with required field list
+      | arules conf=
+      
+      # Test 15: arules with options
+      | arules sup=5 conf=0.7 field1 field2 field3
+      
+      # Test 16: convert with function and field
+      | convert ctime(_time) AS readable_time
+      
+      # Test 17: inputlookup examples
+      | inputlookup threat_intel.csv
+      
+      # Test 18: inputlookup with WHERE clause
+      | inputlookup append=true WHERE department="Engineering" user_data.csv 
+      
+      # Test 19: inputlookup with options
+      | inputlookup append=true strict=false users.csv
+      
+      # Test 20: lookup command with named parameters
+      | lookup dnslookup clienthost AS src_ip OUTPUT clientdns AS src_host

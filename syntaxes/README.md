@@ -14,10 +14,196 @@ A **VS Code extension** that adds **multi-language query syntax highlighting** t
 ✅ **Zero Configuration**: Auto-loads from workspace `.vscode/extensions` folder  
 ✅ **Preserves Validation**: JSON Schema continues to work exactly as before
 
+## SPL Syntax Highlighting - Color Coding Scheme
+
+Following VS Code theme conventions, SPL syntax highlighting uses distinct scopes that themes naturally color differently:
+
+### Scope Mapping
+
+| Element | Scope | Typical Theme Color | Rationale |
+|---------|-------|---------------------|-----------|
+| **Commands** (after `\|`) | `keyword.control.command.*.spl` | **Purple/Blue** | Colored like control flow keywords (if, for, while) |
+| **Functions** (in expressions) | `support.function.*.spl` | **Yellow/Gold** | Colored like built-in functions |
+| **Logical Operators** | `keyword.operator.logical.spl` | **Pink/Magenta** | Colored like boolean operators |
+| **Clause Keywords** | `keyword.control.clause.spl` | **Purple/Blue** | Colored like control keywords |
+| **Arguments/Parameters** | `variable.other.field.spl` | **Light Blue/White** | Colored like variables |
+| **Strings** | `string.quoted.*.spl` | **Orange/Red** | Colored like string literals |
+| **Numbers** | `constant.numeric.*.spl` | **Light Green** | Colored like numeric literals |
+| **Comments** | `comment.*.spl` | **Gray/Green** | Colored like comments |
+
+**Key Distinction**: Commands use `keyword.control.*` (purple) vs Functions use `support.function.*` (yellow) to ensure visual differentiation across all themes.
+
+### Examples
+
+#### Command vs. Function Distinction
+
+```spl
+| stats count BY host          
+  ^^^^^                   ← keyword.control.command.transforming.spl (PURPLE - command)
+        ^^^^^             ← support.function.aggregate.spl (YELLOW - function)
+              ^^          ← keyword.control.clause.spl (PURPLE - clause keyword)
+                 ^^^^     ← variable.other.field.spl (LIGHT BLUE - argument)
+```
+
+```spl
+| eval result=if(status==200, "ok", "fail")
+  ^^^^                        ← keyword.control.command.streaming.spl (PURPLE - command)
+       ^^^^^^                 ← variable.other.field.spl (LIGHT BLUE - field being created)
+              ^^              ← support.function.comparison.spl (YELLOW - function)
+                 ^^^^^^       ← variable.other.field.spl (LIGHT BLUE - field reference)
+                       ^^^^^  ← constant.numeric.integer.spl (LIGHT GREEN - number)
+                              ^^^^  ^^^^  ← string.quoted.double.spl (ORANGE - strings)
+```
+
+#### Logical Operators and Comparisons
+
+```spl
+| where status>400 AND isnotnull(error)
+  ^^^^^                   ← keyword.control.command.streaming.spl (PURPLE - command)
+        ^^^^^^            ← variable.other.field.spl (LIGHT BLUE - field)
+              ^           ← keyword.operator.comparison.spl (PINK - comparison)
+                ^^^       ← constant.numeric.integer.spl (LIGHT GREEN - number)
+                    ^^^   ← keyword.operator.logical.spl (PINK - logical operator)
+                        ^^^^^^^^^^  ← support.function.informational.spl (YELLOW - function)
+```
+
+### Command Categories
+
+Commands are further categorized by type:
+
+```spl
+| search index=main           # Generating command
+  ^^^^^^                      ← keyword.control.command.generating.spl
+
+| stats count BY host         # Transforming command
+  ^^^^^                       ← keyword.control.command.transforming.spl
+
+| eval field=len(message)     # Streaming command
+  ^^^^                        ← keyword.control.command.streaming.spl
+
+| sort -count                 # Dataset processing command
+  ^^^^                        ← keyword.control.command.dataset.spl
+
+| localop                     # Orchestrating command
+  ^^^^^^^                     ← keyword.control.command.orchestrating.spl
+```
+
+### Function Categories
+
+Functions are categorized by their purpose:
+
+```spl
+| eval comparison=if(x>1, "yes", "no")
+                   ^^                    ← support.function.comparison.spl
+
+| eval text=trim(field)
+            ^^^^                         ← support.function.string.spl
+
+| eval number=round(value, 2)
+               ^^^^^                     ← support.function.math.spl
+
+| eval timestamp=now()
+                  ^^^                    ← support.function.date.spl
+
+| eval hash=md5(password)
+             ^^^                         ← support.function.crypto.spl
+
+| eval multi=mvappend(a, b)
+              ^^^^^^^^                   ← support.function.multivalue.spl
+
+| eval obj=json_object("k", v)
+            ^^^^^^^^^^^                  ← support.function.json.spl
+
+| eval bits=bit_and(x, y)
+             ^^^^^^^                     ← support.function.bitwise.spl
+
+| eval check=isnotnull(field)
+              ^^^^^^^^^                  ← support.function.informational.spl
+
+| eval aggregate=avg(f1, f2)
+                  ^^^                    ← support.function.statistical.spl (eval context)
+```
+
+### Syntax Error Indication
+
+Following Splunk's convention, misspelled commands or functions will NOT be highlighted in their correct color:
+
+```spl
+| statss count BY host        # ✗ "statss" remains GREEN (field) instead of BLUE (command)
+  ^^^^^^                       ← variable.other.field.spl (indicates error - not a command)
+
+| eval result=iff(x>1, "yes") # ✗ "iff" remains GREEN instead of PURPLE
+               ^^^             ← variable.other.field.spl (indicates error - not a function)
+
+| stats count BY hots         # ✓ "stats" is BLUE (correct command)
+  ^^^^^                        ← entity.name.function.command.transforming.spl
+```
+
+### Theme Customization
+
+Users can customize colors in their VS Code `settings.json`:
+
+```json
+{
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": "entity.name.function.command",
+        "settings": { "foreground": "#569CD6" }  // Blue for commands
+      },
+      {
+        "scope": "support.function",
+        "settings": { "foreground": "#C586C0" }  // Purple for functions
+      },
+      {
+        "scope": "keyword.operator.logical",
+        "settings": { "foreground": "#CE9178" }  // Orange for operators
+      },
+      {
+        "scope": "keyword.control.clause",
+        "settings": { "foreground": "#CE9178" }  // Orange for keywords
+      },
+      {
+        "scope": "variable.other.field",
+        "settings": { "foreground": "#9CDCFE" }  // Light blue for arguments
+      }
+    ]
+  }
+}
+```
+
+### Complete Example with All Elements
+
+```spl
+# This is a comment (GRAY)
+index=main sourcetype=access_* 
+| stats count AS request_count BY host, status     # Commands (BLUE), Functions (PURPLE), Keywords (ORANGE), Fields (GREEN)
+  ^^^^^       ^^ ^^^^^^^^^^^^^ ^^                  ← Clause keywords (ORANGE)
+        ^^^^^                                       ← Aggregate function (PURPLE)
+                                   ^^^^  ^^^^^^    ← Field arguments (GREEN)
+| eval status_label=case(
+  ^^^^                ^^^^                          ← Command (BLUE), Function (PURPLE)
+    status>=200 AND status<300, "Success",          # Logical operators (ORANGE), Strings (ORANGE/RED)
+           ^^^                                      ← Comparison operator (ORANGE)
+                ^^^                                 ← Logical AND (ORANGE)
+                                    ^^^^^^^^^       ← String literal (ORANGE/RED)
+    status>=400, "Error"
+  )
+| where in(status, "404", "500", "503")            # Function call (PURPLE)
+  ^^^^^                                             ← Command (BLUE)
+        ^^                                          ← Function (PURPLE)
+              ^^^^^^                                ← Field (GREEN)
+                      ^^^^^  ^^^^^  ^^^^^           ← String literals (ORANGE/RED)
+| sort -count                                       # Descending sort
+  ^^^^                                              ← Command (BLUE)
+       ^^^^^^                                       ← Field with direction (GREEN)
+```
+
 ## Supported Languages
 
 ### Currently Implemented
 - ✅ **KQL (Kusto Query Language)**: Microsoft Sentinel, Azure Data Explorer
+- ✅ **SPL (Search Processing Language)**: Splunk (with full command/function distinction)
 
 ### Planned
 - 🔜 **SPL (Search Processing Language)**: Splunk

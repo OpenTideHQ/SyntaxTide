@@ -198,27 +198,27 @@
     "commands": {
       "patterns": [
         {
-          "name": "entity.name.function.command.generating.spl",
+          "name": "keyword.control.command.generating.spl",
           "match": "(?:^|(?<=\\|))\\s*\\b(?:datamodel|dbinspect|eventcount|from|inputcsv|inputlookup|iplocation|loadjob|makeresults|metadata|mstats|rest|savedsearch|search|tstats)\\b"
         },
         {
-          "name": "entity.name.function.command.transforming.spl",
+          "name": "keyword.control.command.transforming.spl",
           "match": "(?:^|(?<=\\|))\\s*\\b(?:addcoltotals|addtotals|anomalydetection|append|chart|timechart|bin|bucket|contingency|correlate|eventcount|eventstats|gauge|chart|pivot|rare|rex|sichart|sirare|sistats|sitimechart|sitop|stats|streamstats|table|timechart|top|transaction|trendline|tstats|untable|xyseries)\\b"
         },
         {
-          "name": "entity.name.function.command.streaming.spl",
+          "name": "keyword.control.command.streaming.spl",
           "match": "(?:^|(?<=\\|))\\s*\\b(?:abstract|accum|addinfo|addtotals|autoregress|convert|dedup|eval|extract|fields|fieldformat|fillnull|filldown|makemv|mvexpand|nomv|rangemap|regex|rename|replace|rex|rtorder|sendemail|streamstats|strcat|tags|typer|where)\\b"
         },
         {
-          "name": "entity.name.function.command.dataset.spl",
+          "name": "keyword.control.command.dataset.spl",
           "match": "(?:^|(?<=\\|))\\s*\\b(?:analyzefields|anomalies|anomalousvalue|associate|cluster|contingency|correlate|diff|head|tail|join|lookup|multisearch|mvcombine|reverse|selfjoin|set|sort|transaction|uniq|untable)\\b"
         },
         {
-          "name": "entity.name.function.command.orchestrating.spl",
+          "name": "keyword.control.command.orchestrating.spl",
           "match": "(?:^|(?<=\\|))\\s*\\b(?:localop|redistribute|noop)\\b"
         },
         {
-          "name": "entity.name.function.command.other.spl",
+          "name": "keyword.control.command.other.spl",
           "match": "(?:^|(?<=\\|))\\s*\\b(?:appendcols|appendpipe|arules|awssnsalert|bucketdir|cofilter|collect|concurrency|crawl|delete|erex|findtypes|folderize|format|gentimes|geom|geomfilter|geostats|highlight|history|iconify|input|kmeans|kvform|localize|map|mcatalog|mcollect|multikv|outputcsv|outputlookup|outlier|overlap|predict|prjob|reltime|return|run|runshellscript|scrub|searchtxn|sendalert|set|setfields|sistats|spath|transpose|tscollect|typeahead|typelearner|union|uniq|x11|xmlkv|xmlunescape|xpath)\\b"
         }
       ]
@@ -447,17 +447,47 @@
     "macros": {
       "patterns": [
         {
-          "name": "entity.name.function.macro.spl",
+          "name": "meta.macro-call.spl",
           "begin": "`",
           "end": "`",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.macro.begin.spl"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.macro.end.spl"
+            }
+          },
           "patterns": [
             {
-              "name": "variable.parameter.macro.spl",
-              "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+              "match": "([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()",
+              "captures": {
+                "1": {
+                  "name": "entity.name.function.macro.spl"
+                },
+                "2": {
+                  "name": "punctuation.definition.arguments.begin.spl"
+                }
+              },
+              "name": "meta.macro-with-args.spl"
             },
             {
-              "name": "punctuation.definition.arguments.begin.spl",
-              "match": "\\("
+              "match": "([a-zA-Z_][a-zA-Z0-9_]*)",
+              "captures": {
+                "1": {
+                  "name": "entity.name.function.macro.spl"
+                }
+              }
+            },
+            {
+              "name": "variable.parameter.macro.spl",
+              "match": "[^`()\\s,]+"
+            },
+            {
+              "name": "punctuation.separator.arguments.spl",
+              "match": ","
             },
             {
               "name": "punctuation.definition.arguments.end.spl",

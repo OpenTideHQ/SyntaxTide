@@ -43,9 +43,14 @@ const vscode_languageserver_textdocument_1 = require("vscode-languageserver-text
 const yaml = __importStar(require("yaml"));
 const spl_commands_database_1 = require("./spl-commands-database");
 const spl_functions_database_1 = require("./spl-functions-database");
+const spl_commands_enhanced_1 = require("./spl-commands-enhanced");
+const spl_validation_1 = require("./spl-validation");
+const spl_parameter_parser_1 = require("./spl-parameter-parser");
 // Create a connection for the server
 const connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
 // Document-specific variable tracking
+// Store user-defined variables per document for autocomplete
+// Map of document URI -> Map of variable name -> declaration line number
 const documentVariables = new Map();
 // Create a simple text document manager
 const documents = new node_1.TextDocuments(vscode_languageserver_textdocument_1.TextDocument);
@@ -114,8 +119,9 @@ documents.onDidChangeContent(change => {
 /**
  * Extract SPL query from YAML configuration block
  * Handles both single and multi-document YAML files
+ * Returns the query text and the line offset where it starts in the file
  */
-function extractSPLQuery(yamlContent) {
+function extractSPLQuery(yamlContent, fullText) {
     try {
         // Handle array of documents (from parseAllDocuments)
         const documents = Array.isArray(yamlContent) ? yamlContent : [yamlContent];
@@ -128,7 +134,33 @@ function extractSPLQuery(yamlContent) {
             for (const platform of platforms) {
                 const config = doc.configurations[platform];
                 if (config && config.query) {
-                    return { query: config.query, offset: 0 };
+                    // Find the position of "query: |" under the specific platform
+                    const queryPattern = new RegExp(`${platform}:[\\s\\S]*?query:\\s*\\|`, 'i');
+                    const match = fullText.match(queryPattern);
+                    if (match) {
+                        // Count lines up to the end of "query: |"
+                        const matchEnd = (match.index || 0) + match[0].length;
+                        const textUpToMatch = fullText.substring(0, matchEnd);
+                        const linesUpToMatch = textUpToMatch.split('\n').length;
+                        // The query content starts on the next line after "query: |"
+                        const offset = linesUpToMatch + 1; // 1-based line number where query content starts
+                        // Find the first non-empty query line to detect indentation
+                        const remainingText = fullText.substring(matchEnd);
+                        const nextLines = remainingText.split('\n');
+                        let indentChars = 0;
+                        // Find the first non-empty line after "query: |"
+                        for (const line of nextLines) {
+                            if (line.trim()) {
+                                indentChars = line.length - line.trimStart().length;
+                                break;
+                            }
+                        }
+                        connection.console.log(`[Offset] Found query block at line ${offset} for platform ${platform}, indent: ${indentChars} chars`);
+                        return { query: config.query, offset: offset - 1, indentChars }; // Convert to 0-based
+                    }
+                    // Fallback: assume query starts at line 0
+                    connection.console.log(`[Offset] Could not find query pattern, using fallback offset 0`);
+                    return { query: config.query, offset: 0, indentChars: 0 };
                 }
             }
         }
@@ -140,17 +172,19 @@ function extractSPLQuery(yamlContent) {
     return null;
 }
 /**
- * Extract user-defined variables from SPL query
+ * Extract user-defined variables from SPL query with line tracking
  * Tracks variables from: eval, rename, rex (field extraction), stats (aggregations), spath
+ * Returns Map of variable name to declaration line
  */
 function extractVariablesFromQuery(query) {
-    const variables = new Set();
+    const variables = new Map();
     const lines = query.split('\n');
     connection.console.log(`[Variable Extraction] Processing query with ${lines.length} lines`);
-    for (const line of lines) {
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
         const trimmedLine = line.trim();
-        // Skip comments and empty lines
-        if (!trimmedLine || trimmedLine.startsWith('#')) {
+        // Skip comments and empty lines (both YAML # and SPL ``` comments)
+        if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('```')) {
             continue;
         }
         // Extract from eval: eval newfield = expression, field2 = expr2
@@ -162,8 +196,8 @@ function extractVariablesFromQuery(query) {
             for (const assignment of assignments) {
                 const fieldMatch = assignment.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
                 if (fieldMatch) {
-                    variables.add(fieldMatch[1]);
-                    connection.console.log(`[Variable] Found eval variable: ${fieldMatch[1]}`);
+                    variables.set(fieldMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found eval variable: ${fieldMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
@@ -176,8 +210,8 @@ function extractVariablesFromQuery(query) {
             for (const rename of renames) {
                 const asMatch = rename.match(/\s+(?:AS|as)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
                 if (asMatch) {
-                    variables.add(asMatch[1]);
-                    connection.console.log(`[Variable] Found rename variable: ${asMatch[1]}`);
+                    variables.set(asMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found rename variable: ${asMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
@@ -186,8 +220,8 @@ function extractVariablesFromQuery(query) {
         const rexNamedGroups = trimmedLine.matchAll(/\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>/g);
         if (trimmedLine.includes('rex')) {
             for (const match of rexNamedGroups) {
-                variables.add(match[1]);
-                connection.console.log(`[Variable] Found rex variable: ${match[1]}`);
+                variables.set(match[1], lineIndex);
+                connection.console.log(`[Variable] Found rex variable: ${match[1]} at line ${lineIndex}`);
             }
         }
         // Extract from stats aggregations: stats count AS event_count, avg(bytes) AS avg_bytes
@@ -198,16 +232,16 @@ function extractVariablesFromQuery(query) {
             for (const agg of aggregations) {
                 const asMatch = agg.match(/\s+(?:AS|as)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
                 if (asMatch) {
-                    variables.add(asMatch[1]);
-                    connection.console.log(`[Variable] Found stats variable: ${asMatch[1]}`);
+                    variables.set(asMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found stats variable: ${asMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
         // Extract from spath: spath output=newfield path=json.path
         const spathMatch = trimmedLine.match(/\|\s*spath\s+.*?output=([a-zA-Z_][a-zA-Z0-9_]*)/i);
         if (spathMatch) {
-            variables.add(spathMatch[1]);
-            connection.console.log(`[Variable] Found spath variable: ${spathMatch[1]}`);
+            variables.set(spathMatch[1], lineIndex);
+            connection.console.log(`[Variable] Found spath variable: ${spathMatch[1]} at line ${lineIndex}`);
         }
         // Extract from streamstats, eventstats (similar to stats)
         const streamstatsMatch = trimmedLine.match(/\|\s*(?:streamstats|eventstats)\s+(.+?)(?:\s+by\s+|$)/i);
@@ -217,13 +251,13 @@ function extractVariablesFromQuery(query) {
             for (const agg of aggregations) {
                 const asMatch = agg.match(/\s+(?:AS|as)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
                 if (asMatch) {
-                    variables.add(asMatch[1]);
-                    connection.console.log(`[Variable] Found streamstats/eventstats variable: ${asMatch[1]}`);
+                    variables.set(asMatch[1], lineIndex);
+                    connection.console.log(`[Variable] Found streamstats/eventstats variable: ${asMatch[1]} at line ${lineIndex}`);
                 }
             }
         }
     }
-    connection.console.log(`[Variable Extraction] Found ${variables.size} total variables: ${Array.from(variables).join(', ')}`);
+    connection.console.log(`[Variable Extraction] Found ${variables.size} total variables: ${Array.from(variables.keys()).join(', ')}`);
     return variables;
 }
 /**
@@ -243,7 +277,7 @@ async function validateTextDocument(textDocument) {
             // Fall back to single document parsing
             yamlDocs = [yaml.parse(text)];
         }
-        const extracted = extractSPLQuery(yamlDocs);
+        const extracted = extractSPLQuery(yamlDocs, text);
         if (!extracted) {
             // Not a relevant document, skip validation
             connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] });
@@ -251,38 +285,33 @@ async function validateTextDocument(textDocument) {
             return;
         }
         const query = extracted.query;
+        const lineOffset = extracted.offset;
+        const charOffset = extracted.indentChars;
+        connection.console.log(`[Validation] Query starts at line ${lineOffset}, character offset: ${charOffset}`);
         // Extract and cache variables for this document
         const variables = extractVariablesFromQuery(query);
         documentVariables.set(textDocument.uri, variables);
         const lines = query.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            // Skip empty lines and comments
-            if (!line || line.startsWith('#')) {
-                continue;
-            }
-            // Check for pipe commands
-            if (line.includes('|')) {
-                const pipes = line.split('|');
-                for (let j = 1; j < pipes.length; j++) {
-                    const commandPart = pipes[j].trim();
-                    const commandName = commandPart.split(/\s+/)[0];
-                    const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
-                    if (!cmd && commandName.length > 0) {
-                        // Unknown command - create diagnostic
-                        const diagnostic = {
-                            severity: node_1.DiagnosticSeverity.Error,
-                            range: {
-                                start: { line: i, character: 0 },
-                                end: { line: i, character: line.length }
-                            },
-                            message: `Unknown SPL command: '${commandName}'. Check command spelling or refer to SPL documentation.`,
-                            source: 'spl-lsp'
-                        };
-                        diagnostics.push(diagnostic);
-                    }
+        // Normalize multiline SPL query - merge continuation lines
+        const normalizedCommands = (0, spl_validation_1.normalizeSPLQuery)(lines);
+        connection.console.log(`[Validation] Normalized ${lines.length} lines into ${normalizedCommands.length} commands`);
+        // Use enhanced validation for each normalized command
+        for (const cmd of normalizedCommands) {
+            const line = cmd.normalizedLine;
+            const lineNum = cmd.originalLineNumber;
+            // Build set of variables available at this line (declared before this line)
+            const availableVariables = new Set();
+            for (const [varName, declLine] of variables.entries()) {
+                if (declLine < lineNum) {
+                    availableVariables.add(varName);
                 }
             }
+            const adjustedLineNum = lineNum + lineOffset;
+            connection.console.log(`[Line Calc] Query lineNum: ${lineNum}, lineOffset: ${lineOffset}, adjusted: ${adjustedLineNum}, charOffset: ${charOffset}`);
+            // Pass the adjusted line number (query line + offset), character offset, and available variables
+            const lineDiagnostics = (0, spl_validation_1.validateSPLLine)(line, adjustedLineNum, textDocument.uri, charOffset, availableVariables, (msg) => connection.console.log(msg) // Pass logger function
+            );
+            diagnostics.push(...lineDiagnostics);
         }
     }
     catch (error) {
@@ -305,43 +334,127 @@ connection.onCompletion((_textDocumentPosition) => {
     const line = text.split('\n')[position.line];
     const beforeCursor = line.substring(0, position.character);
     const completionItems = [];
-    // Get variables defined in current document
-    const variables = documentVariables.get(document.uri) || new Set();
-    connection.console.log(`[Autocomplete] Document has ${variables.size} variables: ${Array.from(variables).join(', ')}`);
+    // Get variables defined in current document before this line
+    const allVariables = documentVariables.get(document.uri) || new Map();
+    const availableVariables = new Map();
+    // Extract SPL query to get the line offset
+    let yamlDocs;
+    try {
+        try {
+            yamlDocs = yaml.parseAllDocuments(text).map(doc => doc.toJSON());
+        }
+        catch {
+            yamlDocs = [yaml.parse(text)];
+        }
+        const extracted = extractSPLQuery(yamlDocs, text);
+        if (extracted) {
+            const lineOffset = extracted.offset;
+            // Current line in the query (0-based, relative to query start)
+            const currentQueryLine = position.line - lineOffset;
+            connection.console.log(`[Autocomplete] Position line: ${position.line}, Query offset: ${lineOffset}, Current query line: ${currentQueryLine}`);
+            // Only include variables declared before the current line in the query
+            for (const [varName, declLine] of allVariables.entries()) {
+                if (declLine < currentQueryLine) {
+                    availableVariables.set(varName, declLine);
+                    connection.console.log(`[Autocomplete] Including variable '${varName}' declared at query line ${declLine}`);
+                }
+                else {
+                    connection.console.log(`[Autocomplete] Excluding variable '${varName}' declared at query line ${declLine} (after current line ${currentQueryLine})`);
+                }
+            }
+        }
+        else {
+            // Not in a query context, show all variables
+            connection.console.log(`[Autocomplete] Not in SPL query context, showing all variables`);
+            allVariables.forEach((declLine, varName) => {
+                availableVariables.set(varName, declLine);
+            });
+        }
+    }
+    catch (error) {
+        connection.console.log(`[Autocomplete] Error extracting query context: ${error}`);
+        // Fallback: show all variables
+        allVariables.forEach((declLine, varName) => {
+            availableVariables.set(varName, declLine);
+        });
+    }
+    connection.console.log(`[Autocomplete] Document has ${allVariables.size} total variables, ${availableVariables.size} available at position line ${position.line}`);
+    // Check if we're after a pipe operator to suggest commands
+    const afterPipe = beforeCursor.trim().endsWith('|') ||
+        /\|\s*$/.test(beforeCursor) ||
+        /\|\s+[a-z]*$/.test(beforeCursor); // Typing command name
+    // Strict check: cursor is immediately after '|' with only whitespace in between
+    // This enforces the UX: right after '|' only command completions should appear.
+    const lastPipe = beforeCursor.lastIndexOf('|');
+    const textAfterLastPipe = lastPipe >= 0 ? beforeCursor.substring(lastPipe + 1) : '';
+    const isJustAfterPipe = !!(lastPipe >= 0 && textAfterLastPipe.trim() === '');
+    // Check if we're inside a command (after command name) to suggest parameters
+    const pipeMatch = beforeCursor.match(/\|\s*([a-z]+)\s+/);
+    if (pipeMatch) {
+        // We're inside a command - suggest parameters
+        const commandName = pipeMatch[1];
+        const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
+        if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+            connection.console.log(`[Autocomplete] Suggesting parameters for command '${commandName}'`);
+            // Get suggested parameters using the parameter parser
+            const suggestedParams = (0, spl_parameter_parser_1.getSuggestedParameters)(beforeCursor, position.character, cmd.parameters);
+            // Add parameter suggestions
+            suggestedParams.forEach((param) => {
+                const isNamed = param.type === spl_commands_database_1.ParameterType.NAMED;
+                const insertText = isNamed ? `${param.name}=` : param.name;
+                completionItems.push({
+                    label: param.name,
+                    kind: isNamed ? node_1.CompletionItemKind.Property : node_1.CompletionItemKind.Field,
+                    insertText: insertText,
+                    detail: `${param.required ? 'Required' : 'Optional'} ${param.type}`,
+                    documentation: `${param.description}\n\nSyntax: ${param.syntax}${param.defaultValue ? `\nDefault: ${param.defaultValue}` : ''}`,
+                    sortText: param.required ? `0_${param.name}` : `1_${param.name}` // Required params first
+                });
+            });
+        }
+    }
     // Suggest SPL commands after pipe operator
-    if (beforeCursor.trim().endsWith('|') || beforeCursor.includes('|')) {
+    if (afterPipe) {
         spl_commands_database_1.SPL_COMMANDS.forEach((cmd, index) => {
             completionItems.push({
                 label: cmd.name,
-                kind: node_1.CompletionItemKind.Function,
+                // Use 'Class' to visually differentiate SPL commands from functions in the UI
+                kind: node_1.CompletionItemKind.Class,
                 data: index,
                 detail: `${cmd.type} - ${cmd.category}`,
                 documentation: cmd.description
             });
         });
+        // If the cursor is directly after the pipe with no non-space characters,
+        // only return command completions (do not include variables/functions yet)
+        if (isJustAfterPipe) {
+            connection.console.log('[Autocomplete] Cursor just after pipe: restricting suggestions to commands only');
+            return completionItems;
+        }
     }
     // Suggest functions in eval/where context
     if (beforeCursor.includes('eval') || beforeCursor.includes('where')) {
         spl_functions_database_1.SPL_FUNCTIONS.forEach((func, index) => {
             completionItems.push({
                 label: func.name,
-                kind: node_1.CompletionItemKind.Method,
+                // Use 'Function' to clearly indicate evaluation functions
+                kind: node_1.CompletionItemKind.Function,
                 data: 1000 + index,
                 detail: `${func.category} function`,
                 documentation: `${func.description}\n\nSignature: ${func.signature}`
             });
         });
     }
-    // Always suggest user-defined variables (fields created by eval, rename, rex, stats, etc.)
+    // Suggest user-defined variables that were declared before current line
     // These are valuable in any context: eval, where, stats BY, fields, etc.
-    if (variables.size > 0) {
-        connection.console.log(`[Autocomplete] Adding ${variables.size} variables to completion list`);
-        variables.forEach((varName) => {
+    if (availableVariables.size > 0) {
+        connection.console.log(`[Autocomplete] Adding ${availableVariables.size} variables to completion list`);
+        availableVariables.forEach((declLine, varName) => {
             completionItems.push({
                 label: varName,
                 kind: node_1.CompletionItemKind.Variable,
                 data: -1, // Special marker for variables
-                detail: 'User-defined field',
+                detail: `User-defined field (query line ${declLine + 1})`,
                 documentation: `Field defined in this query via eval, rename, rex, stats, or spath`,
                 sortText: `0_${varName}` // Sort variables to top of suggestions
             });
@@ -359,28 +472,64 @@ connection.onCompletionResolve((item) => {
         return item;
     }
     else if (item.data < 1000) {
-        // It's a command
+        // It's a command - use enhanced database if available
         const cmd = spl_commands_database_1.SPL_COMMANDS[item.data];
         if (cmd) {
-            item.detail = `${cmd.type} - ${cmd.category}`;
-            item.documentation = {
-                kind: 'markdown',
-                value: [
-                    `**${cmd.name}**`,
-                    '',
-                    cmd.description,
-                    '',
-                    '**Syntax:**',
-                    '```spl',
-                    cmd.syntax,
-                    '```',
-                    '',
-                    '**Examples:**',
-                    ...(cmd.examples || []).map((ex) => `\`\`\`spl\n${ex}\n\`\`\``),
-                    '',
-                    `**Related Commands:** ${(cmd.relatedCommands || []).join(', ')}`
-                ].join('\n')
-            };
+            const cmdEnhanced = (0, spl_commands_enhanced_1.getSPLCommandEnhanced)(cmd.name);
+            if (cmdEnhanced) {
+                const reqArgs = cmdEnhanced.requiredArgs.length > 0
+                    ? ['', '**Required Arguments:**', ...cmdEnhanced.requiredArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}`)]
+                    : [];
+                const optArgs = cmdEnhanced.optionalArgs.length > 0
+                    ? ['', '**Optional Arguments:**', ...cmdEnhanced.optionalArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}${arg.default ? ` [default: ${arg.default}]` : ''}`)]
+                    : [];
+                item.detail = `${cmdEnhanced.type} - ${cmdEnhanced.category}`;
+                item.documentation = {
+                    kind: 'markdown',
+                    value: [
+                        `**${cmdEnhanced.name}**`,
+                        '',
+                        cmdEnhanced.description,
+                        '',
+                        '**Syntax:**',
+                        '```spl',
+                        cmdEnhanced.syntax,
+                        '```',
+                        ...reqArgs,
+                        ...optArgs,
+                        '',
+                        ...(cmdEnhanced.examples && cmdEnhanced.examples.length > 0
+                            ? ['**Examples:**', ...cmdEnhanced.examples.map((ex) => `\`\`\`spl\n${ex}\n\`\`\``)]
+                            : []),
+                        '',
+                        ...(cmdEnhanced.relatedCommands && cmdEnhanced.relatedCommands.length > 0
+                            ? [`**Related Commands:** ${cmdEnhanced.relatedCommands.join(', ')}`]
+                            : [])
+                    ].join('\n')
+                };
+            }
+            else {
+                // Fallback to basic command database
+                item.detail = `${cmd.type} - ${cmd.category}`;
+                item.documentation = {
+                    kind: 'markdown',
+                    value: [
+                        `**${cmd.name}**`,
+                        '',
+                        cmd.description,
+                        '',
+                        '**Syntax:**',
+                        '```spl',
+                        cmd.syntax,
+                        '```',
+                        '',
+                        '**Examples:**',
+                        ...(cmd.examples || []).map((ex) => `\`\`\`spl\n${ex}\n\`\`\``),
+                        '',
+                        `**Related Commands:** ${(cmd.relatedCommands || []).join(', ')}`
+                    ].join('\n')
+                };
+            }
         }
     }
     else {
@@ -428,6 +577,43 @@ connection.onHover((_textDocumentPosition) => {
         return null;
     }
     const word = line.substring(wordRange.start, wordRange.end);
+    // Check if we're hovering over a parameter in a command
+    const pipeMatch = line.match(/\|\s*([a-z]+)\s+/);
+    if (pipeMatch) {
+        const commandName = pipeMatch[1];
+        const cmd = (0, spl_commands_database_1.getSPLCommand)(commandName);
+        if (cmd && cmd.parameters && cmd.parameters.length > 0) {
+            // Find the parameter at this position
+            const commandStart = line.indexOf(commandName);
+            const afterCommand = line.substring(commandStart + commandName.length);
+            const param = (0, spl_parameter_parser_1.getParameterAtPosition)(afterCommand, position.character - (commandStart + commandName.length), cmd.parameters);
+            if (param && param.definition) {
+                const def = param.definition;
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: [
+                            `**${def.name}** - ${def.required ? 'Required' : 'Optional'} ${def.type} parameter`,
+                            '',
+                            def.description,
+                            '',
+                            '**Syntax:**',
+                            '```spl',
+                            def.syntax,
+                            '```',
+                            ...(def.defaultValue ? ['', `**Default:** \`${def.defaultValue}\``] : []),
+                            ...(def.valueType ? ['', `**Type:** \`${def.valueType}\``] : []),
+                            ...(def.examples && def.examples.length > 0 ? [
+                                '',
+                                '**Examples:**',
+                                ...def.examples.map(ex => `- \`${ex}\``)
+                            ] : [])
+                        ].join('\n')
+                    }
+                };
+            }
+        }
+    }
     // Check if it's a user-defined variable
     const variables = documentVariables.get(document.uri) || new Set();
     if (variables.has(word)) {
@@ -448,7 +634,44 @@ connection.onHover((_textDocumentPosition) => {
             }
         };
     }
-    // Check if it's a command
+    // Check if it's a command - use enhanced database for better info
+    const cmdEnhanced = (0, spl_commands_enhanced_1.getSPLCommandEnhanced)(word);
+    if (cmdEnhanced) {
+        const reqArgs = cmdEnhanced.requiredArgs.length > 0
+            ? ['', '**Required Arguments:**', ...cmdEnhanced.requiredArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}`)]
+            : [];
+        const optArgs = cmdEnhanced.optionalArgs.length > 0
+            ? ['', '**Optional Arguments:**', ...cmdEnhanced.optionalArgs.map(arg => `- \`${arg.name}\` (${arg.type}): ${arg.description}${arg.default ? ` [default: ${arg.default}]` : ''}`)]
+            : [];
+        return {
+            contents: {
+                kind: 'markdown',
+                value: [
+                    `**${cmdEnhanced.name}** (${cmdEnhanced.type})`,
+                    '',
+                    cmdEnhanced.description,
+                    '',
+                    '**Syntax:**',
+                    '```spl',
+                    cmdEnhanced.syntax,
+                    '```',
+                    ...reqArgs,
+                    ...optArgs,
+                    '',
+                    '**Category:** ' + cmdEnhanced.category,
+                    '',
+                    ...(cmdEnhanced.examples && cmdEnhanced.examples.length > 0
+                        ? ['**Examples:**', ...cmdEnhanced.examples.map((ex) => `\`\`\`spl\n${ex}\n\`\`\``)]
+                        : []),
+                    '',
+                    ...(cmdEnhanced.relatedCommands && cmdEnhanced.relatedCommands.length > 0
+                        ? [`**Related Commands:** ${cmdEnhanced.relatedCommands.join(', ')}`]
+                        : [])
+                ].join('\n')
+            }
+        };
+    }
+    // Fallback to basic command database
     const cmd = (0, spl_commands_database_1.getSPLCommand)(word);
     if (cmd) {
         return {

@@ -17,12 +17,17 @@ Language Server (server.ts)
     ├─ YAML Parser (yaml package)
     ├─ Variable Tracker (extracts user-defined fields)
     ├─ SPL Validator (validates commands against database)
-    ├─ Hover Provider (rich documentation)
+    │   └─ Enhanced Validation (spl-validation.ts)
+    │       ├─ Command Argument Validation
+    │       ├─ Function Parameter Validation
+    │       └─ Type Checking
+    ├─ Hover Provider (rich documentation with argument details)
     ├─ Completion Provider (context-aware autocomplete)
     └─ Signature Help Provider (function parameter hints)
     ↓ Uses
 SPL Databases
     ├─ spl-commands-database.ts (160+ commands with full metadata)
+    ├─ spl-commands-enhanced.ts (158 commands with detailed argument info)
     └─ spl-functions-database.ts (130+ functions across 15 categories)
 ```
 
@@ -49,7 +54,10 @@ Context-aware suggestions that appear automatically or via `Ctrl+Space`:
 
 Hover over any SPL command, function, or variable to see comprehensive documentation:
 
-- **Commands**: Type, category, full description, syntax, examples, related commands
+- **Commands**: Type, category, full description, syntax, **detailed argument lists**, examples, related commands
+  - **Required Arguments**: Listed with name, type, and description
+  - **Optional Arguments**: Listed with name, type, description, and default values
+  - Example: Hover over `abstract` shows `maxterms (number)` and `maxlines (number)` with defaults
 - **Functions**: Category, description, signature, return type, examples, related functions
 - **User-Defined Variables**: "User-defined field" designation with list of creation methods
 - **Markdown Formatted**: Rich formatting with code blocks and sections
@@ -69,12 +77,33 @@ Example: Type `if(` and see `if(<predicate>, <true_value>, <false_value>)` with 
 
 ### 4. **Error Detection & Diagnostics** ⚠️
 
-Real-time validation of SPL queries:
+Real-time validation of SPL queries with **advanced parameter checking**:
 
+#### Command Validation:
 - **Unknown Commands**: Detects commands not in database
-- **Clear Error Messages**: "Unknown SPL command: 'xyz'. Check command spelling..."
+- **Missing Required Arguments**: Validates that required arguments are provided
+  - Example: `| accum` (missing field) → Error: "Command 'accum' requires 1 argument: field"
+- **Unknown Arguments**: Warns about unrecognized arguments for a command
+  - Example: `| stats count invalidarg=x` → Warning: "Unknown argument 'invalidarg'"
+- **Invalid Argument Types**: Checks that argument values match expected types
+  - Example: `| abstract maxlines="text"` → Error: "Argument 'maxlines' expects a number, but got 'text'"
+
+#### Function Validation:
+- **Parameter Count Checking**: Validates function parameter counts
+  - Example: `if(x)` → Error: "Function 'if()' requires at least 3 parameters, but got 1"
+  - Example: `round(x, 2, 3)` → Error: "Function 'round()' accepts at most 2 parameters, but got 3"
+- **Variadic Functions**: Properly handles functions accepting variable arguments
+  - Example: `coalesce(a, b, c, d)` → Valid (variadic function)
+- **Clear Error Messages**: Detailed messages with exact parameter requirements
 - **Error Underlining**: Red squiggly lines under problematic code
 - **Problems Panel Integration**: All errors appear in VS Code Problems panel
+
+**Advanced Validation Features**:
+- Uses `COMMANDS_ANALYSIS.json` for detailed argument metadata (158 commands)
+- Parses function signatures to extract parameter requirements
+- Distinguishes between required/optional parameters
+- Validates argument types (number, boolean, string, field)
+- Respects default values for optional parameters
 
 ### 5. **Enhanced Completion Resolution** 📚
 
@@ -211,9 +240,11 @@ configurations:
 ```
 src/
 ├── extension.ts                  # LSP client, activates the language server
-├── server.ts                     # LSP server implementation (370 lines)
+├── server.ts                     # LSP server implementation (400+ lines)
 ├── spl-commands-database.ts      # 64 SPL commands with full metadata
+├── spl-commands-enhanced.ts      # 158 SPL commands with detailed argument info (NEW)
 ├── spl-functions-database.ts     # 95+ SPL functions with signatures
+├── spl-validation.ts             # Advanced validation logic (NEW)
 └── README.md                     # This file
 ```
 
