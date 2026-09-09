@@ -1,3 +1,5 @@
+> **This repository is archived.** Editor tooling is listed as upcoming on [opentide.org](https://opentide.org); this LSP experiment is frozen. Pinned checkouts of this tree still work. New work: [opentide.org](https://opentide.org) · [migration guide](https://opentide.org/docs/usage/migration/).
+
 > [!WARNING]
 > This is currently a very early stage project, and we provide NO SUPPORT for now. 
 > The repo is planned for reimplementation and official announcement in coming months.
